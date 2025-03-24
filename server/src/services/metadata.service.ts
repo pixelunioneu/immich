@@ -77,6 +77,12 @@ const validateRange = (value: number | undefined, min: number, max: number): Non
 
 type ImmichTagsWithFaces = ImmichTags & { RegionInfo: NonNullable<ImmichTags['RegionInfo']> };
 
+type Dates = {
+  dateTimeOriginal: Date;
+  modifyDate: Date;
+  localDateTime: Date;
+};
+
 @Injectable()
 export class MetadataService extends BaseService {
   @OnEvent({ name: 'app.bootstrap', workers: [ImmichWorker.MICROSERVICES] })
@@ -172,17 +178,9 @@ export class MetadataService extends BaseService {
     }
 
     const exifTags = await this.getExifTags(asset);
-    if (!exifTags.FileCreateDate || !exifTags.FileModifyDate || exifTags.FileSize === undefined) {
-      this.logger.warn(`Missing file creation or modification date for asset ${asset.id}: ${asset.originalPath}`);
-      const stat = await this.storageRepository.stat(asset.originalPath);
-      exifTags.FileCreateDate = stat.ctime.toISOString();
-      exifTags.FileModifyDate = stat.mtime.toISOString();
-      exifTags.FileSize = stat.size.toString();
-    }
-
     this.logger.verbose('Exif Tags', exifTags);
 
-    const { dateTimeOriginal, localDateTime, timeZone, modifyDate } = this.getDates(asset, exifTags);
+    const dates = await this.getDates(asset, exifTags);
 
     const { width, height } = this.getImageDimensions(exifTags);
     let geo: ReverseGeocodeResult, latitude: number | null, longitude: number | null;
@@ -200,9 +198,9 @@ export class MetadataService extends BaseService {
       assetId: asset.id,
 
       // dates
-      dateTimeOriginal,
-      modifyDate,
-      timeZone,
+      dateTimeOriginal: dates.dateTimeOriginal,
+      modifyDate: dates.modifyDate,
+      timeZone: dates.timeZone,
 
       // gps
       latitude,
@@ -245,7 +243,7 @@ export class MetadataService extends BaseService {
       this.assetRepository.update({
         id: asset.id,
         duration: exifTags.Duration?.toString() ?? null,
-        localDateTime,
+        localDateTime: dates.localDateTime,
         fileCreatedAt: exifData.dateTimeOriginal ?? undefined,
         fileModifiedAt: exifData.modifyDate ?? undefined,
       }),
@@ -253,7 +251,7 @@ export class MetadataService extends BaseService {
     ];
 
     if (this.isMotionPhoto(asset, exifTags)) {
-      promises.push(this.applyMotionPhotos(asset, exifTags, exifData.fileSizeInByte!));
+      promises.push(this.applyMotionPhotos(asset, exifTags, exifData.fileSizeInByte!, dates));
     }
 
     if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
@@ -432,7 +430,7 @@ export class MetadataService extends BaseService {
     return asset.type === AssetType.IMAGE && !!(tags.MotionPhoto || tags.MicroVideo);
   }
 
-  private async applyMotionPhotos(asset: AssetEntity, tags: ImmichTags, fileSize: number) {
+  private async applyMotionPhotos(asset: AssetEntity, tags: ImmichTags, fileSize: number, dates: Dates) {
     const isMotionPhoto = tags.MotionPhoto;
     const isMicroVideo = tags.MicroVideo;
     const videoOffset = tags.MicroVideoOffset;
@@ -505,7 +503,6 @@ export class MetadataService extends BaseService {
         }
       } else {
         const motionAssetId = this.cryptoRepository.randomUUID();
-        const dates = this.getDates(asset, tags);
         motionAsset = await this.assetRepository.create({
           id: motionAssetId,
           libraryId: asset.libraryId,
@@ -634,7 +631,7 @@ export class MetadataService extends BaseService {
     }
   }
 
-  private getDates(asset: AssetEntity, exifTags: ImmichTags) {
+  private async getDates(asset: AssetEntity, exifTags: ImmichTags) {
     const dateTime = firstDateTime(exifTags as Maybe<Tags>, EXIF_DATE_TAGS);
     this.logger.verbose(`Date and time is ${dateTime} for asset ${asset.id}: ${asset.originalPath}`);
 
@@ -658,13 +655,14 @@ export class MetadataService extends BaseService {
     let dateTimeOriginal = dateTime?.toDate();
     let localDateTime = dateTime?.toDateTime().setZone('UTC', { keepLocalTime: true }).toJSDate();
     if (!localDateTime || !dateTimeOriginal) {
-      const fileCreatedAt = this.toDate(exifTags.FileCreateDate!);
-      const earliestDate = this.earliestDate(fileCreatedAt, modifyDate);
+      const stats = await this.storageRepository.stat(asset.originalPath);
+      // FileCreateDate is not available on linux, likely because exiftool hasn't integrated the statx syscall yet
+      // birthtime is not available in Docker on macOS, so it appears as 0
+      const earliestDate = stats.birthtimeMs ? new Date(Math.min(stats.mtimeMs, stats.birthtimeMs)) : modifyDate;
       this.logger.debug(
-        `No exif date time found, falling back on ${earliestDate.toISOString()}, earliest of file creation and modification for assset ${asset.id}: ${asset.originalPath}`,
+        `No exif date time found, falling back on ${earliestDate.toISOString()}, earliest of file creation and modification for asset ${asset.id}: ${asset.originalPath}`,
       );
-      dateTimeOriginal = earliestDate;
-      localDateTime = earliestDate;
+      dateTimeOriginal = localDateTime = earliestDate;
     }
 
     this.logger.verbose(
@@ -681,10 +679,6 @@ export class MetadataService extends BaseService {
 
   private toDate(date: string | ExifDateTime): Date {
     return typeof date === 'string' ? new Date(date) : date.toDate();
-  }
-
-  private earliestDate(a: Date, b: Date) {
-    return new Date(Math.min(a.valueOf(), b.valueOf()));
   }
 
   private hasGeo(tags: ImmichTags): tags is ImmichTags & { GPSLatitude: number; GPSLongitude: number } {
