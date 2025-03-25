@@ -1,5 +1,6 @@
 import { BinaryField, ExifDateTime } from 'exiftool-vendored';
 import { randomBytes } from 'node:crypto';
+import { Stats } from 'node:fs';
 import { constants } from 'node:fs/promises';
 import { defaults } from 'src/config';
 import { AssetEntity } from 'src/entities/asset.entity';
@@ -23,7 +24,6 @@ describe(MetadataService.name, () => {
   const mockReadTags = (exifData?: Partial<ImmichTags>, sidecarData?: Partial<ImmichTags>) => {
     exifData = {
       FileSize: '123456',
-      FileCreateDate: '2024-01-01T00:00:00.000Z',
       FileModifyDate: '2024-01-01T00:00:00.000Z',
       ...exifData,
     };
@@ -114,6 +114,11 @@ describe(MetadataService.name, () => {
   });
 
   describe('handleMetadataExtraction', () => {
+    beforeEach(() => {
+      const time = new Date('2022-01-01T00:00:00.000Z').valueOf();
+      mocks.storage.stat.mockResolvedValue({ size: 123_456, mtimeMs: time, birthtimeMs: time } as Stats);
+    });
+
     it('should handle an asset that could not be found', async () => {
       await expect(sut.handleMetadataExtraction({ id: assetStub.image.id })).resolves.toBe(JobStatus.FAILED);
 
@@ -145,10 +150,12 @@ describe(MetadataService.name, () => {
       const fileCreatedAt = new Date('2022-01-01T00:00:00.000Z');
       const fileModifiedAt = new Date('2021-01-01T00:00:00.000Z');
       mocks.asset.getByIds.mockResolvedValue([assetStub.image]);
-      mockReadTags({
-        FileCreateDate: fileCreatedAt.toISOString(),
-        FileModifyDate: fileModifiedAt.toISOString(),
-      });
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: fileModifiedAt.valueOf(),
+        birthtimeMs: fileCreatedAt.valueOf(),
+      } as Stats);
+      mockReadTags({ FileModifyDate: fileModifiedAt.toISOString() });
 
       await sut.handleMetadataExtraction({ id: assetStub.image.id });
       expect(mocks.asset.getByIds).toHaveBeenCalledWith([assetStub.image.id], { faces: { person: false } });
@@ -168,10 +175,12 @@ describe(MetadataService.name, () => {
       const fileCreatedAt = new Date('2021-01-01T00:00:00.000Z');
       const fileModifiedAt = new Date('2022-01-01T00:00:00.000Z');
       mocks.asset.getByIds.mockResolvedValue([assetStub.image]);
-      mockReadTags({
-        FileCreateDate: fileCreatedAt.toISOString(),
-        FileModifyDate: fileModifiedAt.toISOString(),
-      });
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: fileModifiedAt.valueOf(),
+        birthtimeMs: fileCreatedAt.valueOf(),
+      } as Stats);
+      mockReadTags({ FileModifyDate: fileModifiedAt.toISOString() });
 
       await sut.handleMetadataExtraction({ id: assetStub.image.id });
       expect(mocks.asset.getByIds).toHaveBeenCalledWith([assetStub.image.id], { faces: { person: false } });
@@ -206,9 +215,13 @@ describe(MetadataService.name, () => {
 
     it('should handle lists of numbers', async () => {
       mocks.asset.getByIds.mockResolvedValue([assetStub.image]);
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: assetStub.image.fileModifiedAt.valueOf(),
+        birthtimeMs: assetStub.image.fileCreatedAt.valueOf(),
+      } as Stats);
       mockReadTags({
         ISO: [160],
-        FileCreateDate: assetStub.image.fileCreatedAt.toISOString(),
         FileModifyDate: assetStub.image.fileModifiedAt.toISOString(),
       });
 
@@ -228,10 +241,14 @@ describe(MetadataService.name, () => {
       mocks.asset.getByIds.mockResolvedValue([assetStub.withLocation]);
       mocks.systemMetadata.get.mockResolvedValue({ reverseGeocoding: { enabled: true } });
       mocks.map.reverseGeocode.mockResolvedValue({ city: 'City', state: 'State', country: 'Country' });
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: assetStub.withLocation.fileModifiedAt.valueOf(),
+        birthtimeMs: assetStub.withLocation.fileCreatedAt.valueOf(),
+      } as Stats);
       mockReadTags({
         GPSLatitude: assetStub.withLocation.exifInfo!.latitude!,
         GPSLongitude: assetStub.withLocation.exifInfo!.longitude!,
-        FileCreateDate: assetStub.withLocation.fileCreatedAt.toISOString(),
         FileModifyDate: assetStub.withLocation.fileModifiedAt.toISOString(),
       });
 
@@ -475,6 +492,11 @@ describe(MetadataService.name, () => {
 
     it('should extract the MotionPhotoVideo tag from Samsung HEIC motion photos', async () => {
       mocks.asset.getByIds.mockResolvedValue([{ ...assetStub.livePhotoWithOriginalFileName, livePhotoVideoId: null }]);
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.valueOf(),
+        birthtimeMs: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.valueOf(),
+      } as Stats);
       mockReadTags({
         Directory: 'foo/bar/',
         MotionPhoto: 1,
@@ -483,7 +505,6 @@ describe(MetadataService.name, () => {
         // instead of the EmbeddedVideoFile, since HEIC MotionPhotos include both
         EmbeddedVideoFile: new BinaryField(0, ''),
         EmbeddedVideoType: 'MotionPhoto_Data',
-        FileCreateDate: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.toISOString(),
         FileModifyDate: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.toISOString(),
       });
       mocks.crypto.hashSha1.mockReturnValue(randomBytes(512));
@@ -525,13 +546,17 @@ describe(MetadataService.name, () => {
     });
 
     it('should extract the EmbeddedVideo tag from Samsung JPEG motion photos', async () => {
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.valueOf(),
+        birthtimeMs: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.valueOf(),
+      } as Stats);
       mocks.asset.getByIds.mockResolvedValue([{ ...assetStub.livePhotoWithOriginalFileName, livePhotoVideoId: null }]);
       mockReadTags({
         Directory: 'foo/bar/',
         EmbeddedVideoFile: new BinaryField(0, ''),
         EmbeddedVideoType: 'MotionPhoto_Data',
         MotionPhoto: 1,
-        FileCreateDate: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.toISOString(),
         FileModifyDate: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.toISOString(),
       });
       mocks.crypto.hashSha1.mockReturnValue(randomBytes(512));
@@ -574,12 +599,16 @@ describe(MetadataService.name, () => {
 
     it('should extract the motion photo video from the XMP directory entry ', async () => {
       mocks.asset.getByIds.mockResolvedValue([{ ...assetStub.livePhotoWithOriginalFileName, livePhotoVideoId: null }]);
+      mocks.storage.stat.mockResolvedValue({
+        size: 123_456,
+        mtimeMs: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.valueOf(),
+        birthtimeMs: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.valueOf(),
+      } as Stats);
       mockReadTags({
         Directory: 'foo/bar/',
         MotionPhoto: 1,
         MicroVideo: 1,
         MicroVideoOffset: 1,
-        FileCreateDate: assetStub.livePhotoWithOriginalFileName.fileCreatedAt.toISOString(),
         FileModifyDate: assetStub.livePhotoWithOriginalFileName.fileModifiedAt.toISOString(),
       });
       mocks.crypto.hashSha1.mockReturnValue(randomBytes(512));
