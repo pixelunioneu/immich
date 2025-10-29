@@ -7,6 +7,7 @@ import {
 } from 'src/commands/media-location.command';
 import { DisableOAuthLogin, EnableOAuthLogin } from 'src/commands/oauth-login';
 import { DisablePasswordLoginCommand, EnablePasswordLoginCommand } from 'src/commands/password-login';
+import { QueueStatsCommand } from 'src/commands/queue-stats.command';
 import { PromptPasswordQuestions, ResetAdminPasswordCommand } from 'src/commands/reset-admin-password.command';
 import { VersionCommand } from 'src/commands/version.command';
 
@@ -25,4 +26,5 @@ export const commandsAndQuestions = [
   ChangeMediaLocationCommand,
   PromptMediaLocationQuestions,
   PromptConfirmMoveQuestions,
+  QueueStatsCommand,
 ];
