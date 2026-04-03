@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { MetricOptions } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';
 import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
@@ -57,6 +58,53 @@ const aggregationBoundaries = [
 
 let instance: NodeSDK | undefined;
 
+const parseHeaders = (value: string | undefined): Record<string, string> | undefined => {
+  if (!value) {
+    return;
+  }
+
+  const headers: Record<string, string> = {};
+  for (const entry of value.split(',').map((entry) => entry.trim()).filter(Boolean)) {
+    const [key, ...rest] = entry.split('=');
+    const headerKey = key?.trim();
+    const headerValue = rest.join('=').trim();
+    if (!headerKey || !headerValue) {
+      continue;
+    }
+    headers[headerKey] = headerValue;
+  }
+
+  if (Object.keys(headers).length === 0) {
+    return;
+  }
+
+  return headers;
+};
+
+const getTraceExporter = () => {
+  const tracesExporter = process.env.OTEL_TRACES_EXPORTER?.trim().toLowerCase();
+  const tracingEnabled =
+    tracesExporter === 'otlp' ||
+    tracesExporter === 'otlp_http' ||
+    !!process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
+    !!process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+  if (!tracingEnabled) {
+    return;
+  }
+
+  const tracesEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?.trim();
+  const baseEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
+  const url = tracesEndpoint || (baseEndpoint ? new URL('/v1/traces', baseEndpoint).toString() : undefined);
+  const headers = parseHeaders(process.env.OTEL_EXPORTER_OTLP_TRACES_HEADERS || process.env.OTEL_EXPORTER_OTLP_HEADERS);
+  const config = {
+    ...(url ? { url } : {}),
+    ...(headers ? { headers } : {}),
+  };
+
+  return new OTLPTraceExporter(config);
+};
+
 export const bootstrapTelemetry = (port: number) => {
   if (instance) {
     throw new Error('OpenTelemetry SDK already started');
@@ -67,6 +115,7 @@ export const bootstrapTelemetry = (port: number) => {
       [ATTR_SERVICE_VERSION]: serverVersion.toString(),
     }),
     metricReader: new PrometheusExporter({ port }),
+    traceExporter: getTraceExporter(),
     contextManager: new AsyncLocalStorageContextManager(),
     instrumentations: [
       new HttpInstrumentation(),
