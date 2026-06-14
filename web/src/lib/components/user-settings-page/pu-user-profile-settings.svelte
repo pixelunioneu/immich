@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PuEmailChangeSettings from '$lib/components/user-settings-page/pu-email-change-settings.svelte';
   import { Button } from '@immich/ui';
   import { fade } from 'svelte/transition';
   const TOTP_SETUP_URL = 'https://login.pixelunion.eu/realms/pixelunion/account/';
@@ -13,5 +14,6 @@
     <div class="flex">
       <Button shape="round" size="small" onclick={() => openInNewTab(TOTP_SETUP_URL)}>Manage your account</Button>
     </div>
+    <PuEmailChangeSettings />
   </div>
 </section>
