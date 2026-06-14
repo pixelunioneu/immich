@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { isString } from 'class-validator';
 import { parse } from 'cookie';
 import { DateTime } from 'luxon';
@@ -13,6 +13,7 @@ import {
   ChangePasswordDto,
   LoginCredentialDto,
   LogoutResponseDto,
+  OidcTokenResponseDto,
   OAuthCallbackDto,
   OAuthConfigDto,
   PinCodeChangeDto,
@@ -26,6 +27,7 @@ import { UserAdminResponseDto, mapUserAdmin } from 'src/dtos/user.dto';
 import { AuthType, ImmichCookie, ImmichHeader, ImmichQuery, JobName, Permission, StorageFolder } from 'src/enum';
 import { OAuthProfile } from 'src/repositories/oauth.repository';
 import { BaseService } from 'src/services/base.service';
+import { PixelUnionAuthService } from 'src/services/pixelunion-auth.service';
 import { isGranted } from 'src/utils/access';
 import { HumanReadableSize } from 'src/utils/bytes';
 import { mimeTypes } from 'src/utils/mime-types';
@@ -58,6 +60,9 @@ export type ValidateRequest = {
 
 @Injectable()
 export class AuthService extends BaseService {
+  @Inject(PixelUnionAuthService)
+  private pixelUnionAuthService!: PixelUnionAuthService;
+
   async login(dto: LoginCredentialDto, details: LoginDetails) {
     const config = await this.getConfig({ withCache: false });
     if (!config.passwordLogin.enabled) {
@@ -81,6 +86,8 @@ export class AuthService extends BaseService {
   }
 
   async logout(auth: AuthDto, authType: AuthType): Promise<LogoutResponseDto> {
+    await this.pixelUnionAuthService.revokeStoredToken(auth.session?.id, auth.user.id).catch(() => {});
+
     if (auth.session) {
       await this.sessionRepository.delete(auth.session.id);
       await this.eventRepository.emit('SessionDelete', { sessionId: auth.session.id });
@@ -277,7 +284,12 @@ export class AuthService extends BaseService {
     }
 
     const url = this.resolveRedirectUri(oauth, dto.url);
-    const profile = await this.oauthRepository.getProfile(oauth, url, expectedState, codeVerifier);
+    const { profile, refreshToken } = await this.oauthRepository.getProfileWithTokens(
+      oauth,
+      url,
+      expectedState,
+      codeVerifier,
+    );
     const { autoRegister, defaultStorageQuota, storageLabelClaim, storageQuotaClaim, roleClaim } = oauth;
     this.logger.debug(`Logging in with OAuth: ${JSON.stringify(profile)}`);
     let user: UserAdmin | undefined = await this.userRepository.getByOAuthId(profile.sub);
@@ -343,7 +355,7 @@ export class AuthService extends BaseService {
       await this.syncProfilePicture(user, profile.picture);
     }
 
-    return this.createLoginResponse(user, loginDetails);
+    return this.createLoginResponse(user, loginDetails, refreshToken);
   }
 
   private async syncProfilePicture(user: UserAdmin, url: string) {
@@ -549,17 +561,21 @@ export class AuthService extends BaseService {
     await this.sessionRepository.update(auth.session.id, { pinExpiresAt: null });
   }
 
-  private async createLoginResponse(user: UserAdmin, loginDetails: LoginDetails) {
+  private async createLoginResponse(user: UserAdmin, loginDetails: LoginDetails, refreshToken?: string) {
     const token = this.cryptoRepository.randomBytesAsText(32);
     const hashed = this.cryptoRepository.hashSha256(token);
 
-    await this.sessionRepository.create({
+    const session = await this.sessionRepository.create({
       token: hashed,
       deviceOS: loginDetails.deviceOS,
       deviceType: loginDetails.deviceType,
       appVersion: loginDetails.appVersion,
       userId: user.id,
     });
+
+    if (refreshToken) {
+      await this.pixelUnionAuthService.storeRefreshToken(session.id, refreshToken, user.id);
+    }
 
     return mapLoginResponse(user, token);
   }
@@ -594,5 +610,13 @@ export class AuthService extends BaseService {
       expiresAt: session?.expiresAt?.toISOString(),
       pinExpiresAt: session?.pinExpiresAt?.toISOString(),
     };
+  }
+
+  async getOidcToken(auth: AuthDto): Promise<OidcTokenResponseDto> {
+    if (!auth.session) {
+      throw new BadRequestException('This endpoint requires a session token');
+    }
+
+    return this.pixelUnionAuthService.getOidcToken(auth.session.id, auth.user.id);
   }
 }

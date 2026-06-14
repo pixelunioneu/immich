@@ -56,6 +56,7 @@ import { PartnerAuditTable } from 'src/schema/tables/partner-audit.table';
 import { PartnerTable } from 'src/schema/tables/partner.table';
 import { PersonAuditTable } from 'src/schema/tables/person-audit.table';
 import { PersonTable } from 'src/schema/tables/person.table';
+import { PixelUnionSessionTokenTable } from 'src/schema/tables/pixelunion-session-token.table';
 import { PluginActionTable, PluginFilterTable, PluginTable } from 'src/schema/tables/plugin.table';
 import { SessionTable } from 'src/schema/tables/session.table';
 import { SharedLinkAssetTable } from 'src/schema/tables/shared-link-asset.table';
@@ -115,6 +116,7 @@ export class ImmichDatabase {
     PartnerTable,
     PersonTable,
     PersonAuditTable,
+    PixelUnionSessionTokenTable,
     SessionTable,
     SharedLinkAssetTable,
     SharedLinkTable,
@@ -223,6 +225,8 @@ export interface DB {
 
   person: PersonTable;
   person_audit: PersonAuditTable;
+
+  pixelunion_session_token: PixelUnionSessionTokenTable;
 
   session: SessionTable;
   session_sync_checkpoint: SessionSyncCheckpointTable;

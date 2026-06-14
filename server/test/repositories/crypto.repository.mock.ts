@@ -15,5 +15,7 @@ export const newCryptoRepositoryMock = (): Mocked<RepositoryInterface<CryptoRepo
     randomBytesAsText: vitest.fn().mockReturnValue(Buffer.from('random-bytes').toString('base64')),
     signJwt: vitest.fn().mockReturnValue('mock-jwt-token'),
     verifyJwt: vitest.fn().mockImplementation((token) => ({ verified: true, token })),
+    encryptAesGcm: vitest.fn().mockImplementation((plaintext) => Buffer.from(`encrypted:${plaintext}`)),
+    decryptAesGcm: vitest.fn().mockImplementation((data) => data.toString().replace('encrypted:', '')),
   };
 };

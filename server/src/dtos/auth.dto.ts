@@ -184,3 +184,11 @@ export class AuthStatusResponseDto {
   @ApiPropertyOptional({ description: 'PIN expiration date' })
   pinExpiresAt?: string;
 }
+
+export class OidcTokenResponseDto {
+  @ApiPropertyOptional({ description: 'OIDC access token for use with PixelUnion APIs' })
+  accessToken?: string;
+
+  @ApiPropertyOptional({ description: 'Whether the user must re-authenticate via OAuth' })
+  reauth?: boolean;
+}

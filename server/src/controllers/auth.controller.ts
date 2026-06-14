@@ -9,6 +9,7 @@ import {
   LoginCredentialDto,
   LoginResponseDto,
   LogoutResponseDto,
+  OidcTokenResponseDto,
   PinCodeChangeDto,
   PinCodeResetDto,
   PinCodeSetupDto,
@@ -116,6 +117,19 @@ export class AuthController {
   })
   getAuthStatus(@Auth() auth: AuthDto): Promise<AuthStatusResponseDto> {
     return this.service.getAuthStatus(auth);
+  }
+
+  @Post('oidc-token')
+  @Authenticated()
+  @HttpCode(HttpStatus.OK)
+  @Endpoint({
+    summary: 'Exchange OIDC access token',
+    description:
+      'Exchange the stored Keycloak refresh token for a fresh access token for use with PixelUnion APIs.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  getOidcToken(@Auth() auth: AuthDto): Promise<OidcTokenResponseDto> {
+    return this.service.getOidcToken(auth);
   }
 
   @Post('pin-code')

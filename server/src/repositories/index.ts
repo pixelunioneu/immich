@@ -30,6 +30,7 @@ import { OAuthRepository } from 'src/repositories/oauth.repository';
 import { OcrRepository } from 'src/repositories/ocr.repository';
 import { PartnerRepository } from 'src/repositories/partner.repository';
 import { PersonRepository } from 'src/repositories/person.repository';
+import { PixelUnionSessionTokenRepository } from 'src/repositories/pixelunion-session-token.repository';
 import { PluginRepository } from 'src/repositories/plugin.repository';
 import { ProcessRepository } from 'src/repositories/process.repository';
 import { PuApiRepository } from 'src/repositories/pu-api.repository';
@@ -85,6 +86,7 @@ export const repositories = [
   OcrRepository,
   PartnerRepository,
   PersonRepository,
+  PixelUnionSessionTokenRepository,
   PluginRepository,
   ProcessRepository,
   PuApiRepository,

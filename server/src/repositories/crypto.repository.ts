@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createHash, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 
 @Injectable()
@@ -65,5 +65,22 @@ export class CryptoRepository {
 
   verifyJwt<T = any>(token: string, secret: string): T {
     return jwt.verify(token, secret, { algorithms: ['HS256'] }) as T;
+  }
+
+  encryptAesGcm(plaintext: string, key: Buffer): Buffer {
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return Buffer.concat([iv, tag, encrypted]);
+  }
+
+  decryptAesGcm(data: Buffer, key: Buffer): string {
+    const iv = data.subarray(0, 12);
+    const tag = data.subarray(12, 28);
+    const encrypted = data.subarray(28);
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    return decipher.update(encrypted) + decipher.final('utf8');
   }
 }

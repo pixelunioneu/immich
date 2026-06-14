@@ -11,7 +11,9 @@ import {
   None,
   randomPKCECodeVerifier,
   randomState,
+  refreshTokenGrant,
   skipSubjectCheck,
+  tokenRevocation,
   type UserInfoResponse,
 } from 'openid-client';
 import { OAuthTokenEndpointAuthMethod } from 'src/enum';
@@ -111,6 +113,66 @@ export class OAuthRepository {
 
       throw new Error('OAuth login failed', { cause: error });
     }
+  }
+
+  async getProfileWithTokens(
+    config: OAuthConfig,
+    url: string,
+    expectedState: string,
+    codeVerifier: string,
+  ): Promise<{ profile: OAuthProfile; refreshToken?: string }> {
+    const client = await this.getClient(config);
+    const pkceCodeVerifier = client.serverMetadata().supportsPKCE() ? codeVerifier : undefined;
+
+    try {
+      const tokens = await authorizationCodeGrant(client, new URL(url), { expectedState, pkceCodeVerifier });
+
+      let profile: OAuthProfile;
+      const tokenClaims = tokens.claims();
+      if (tokenClaims && 'email' in tokenClaims) {
+        this.logger.debug('Using ID token claims instead of userinfo endpoint');
+        profile = tokenClaims as OAuthProfile;
+      } else {
+        profile = await fetchUserInfo(client, tokens.access_token, skipSubjectCheck);
+      }
+
+      if (!profile.sub) {
+        throw new Error('Unexpected profile response, no `sub`');
+      }
+
+      return { profile, refreshToken: tokens.refresh_token };
+    } catch (error: Error | any) {
+      if (error.message.includes('unexpected JWT alg received')) {
+        this.logger.warn(
+          [
+            'Algorithm mismatch. Make sure the signing algorithm is set correctly in the OAuth settings.',
+            'Or, that you have specified a signing key in your OAuth provider.',
+          ].join(' '),
+        );
+      }
+
+      this.logger.error(`OAuth login failed: ${error.message}`);
+      this.logger.error(error);
+
+      throw new Error('OAuth login failed', { cause: error });
+    }
+  }
+
+  async refreshAccessToken(
+    config: OAuthConfig,
+    refreshToken: string,
+  ): Promise<{ accessToken: string; newRefreshToken?: string }> {
+    const client = await this.getClient(config);
+    const tokens = await refreshTokenGrant(client, refreshToken);
+    return {
+      accessToken: tokens.access_token!,
+      newRefreshToken: tokens.refresh_token,
+    };
+  }
+
+  async revokeToken(config: OAuthConfig, token: string): Promise<void> {
+    const client = await this.getClient(config);
+    await tokenRevocation(client, token);
   }
 
   async getProfilePicture(url: string) {

@@ -25,6 +25,7 @@ import { OcrService } from 'src/services/ocr.service';
 import { PartnerService } from 'src/services/partner.service';
 import { PersonService } from 'src/services/person.service';
 import { PluginService } from 'src/services/plugin.service';
+import { PixelUnionAuthService } from 'src/services/pixelunion-auth.service';
 import { PuApiSyncService } from 'src/services/pu-api-sync.service';
 import { QueueService } from 'src/services/queue.service';
 import { SearchService } from 'src/services/search.service';
@@ -76,6 +77,7 @@ export const services = [
   PartnerService,
   PersonService,
   PluginService,
+  PixelUnionAuthService,
   PuApiSyncService,
   QueueService,
   SearchService,
