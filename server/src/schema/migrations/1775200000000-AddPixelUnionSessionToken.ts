@@ -6,9 +6,11 @@ export async function up(db: Kysely<any>): Promise<void> {
   "keycloakRefreshToken" bytea NOT NULL,
   "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
   "updatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  "updateId" uuid NOT NULL DEFAULT immich_uuid_v7(),
   CONSTRAINT "pixelunion_session_token_pkey" PRIMARY KEY ("sessionId"),
   CONSTRAINT "pixelunion_session_token_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "session" ("id") ON UPDATE CASCADE ON DELETE CASCADE
 );`.execute(db);
+  await sql`CREATE INDEX "IDX_pixelunion_session_token_update_id" ON "pixelunion_session_token" ("updateId")`.execute(db);
   await sql`CREATE OR REPLACE TRIGGER "pixelunion_session_token_updatedAt"
   BEFORE UPDATE ON "pixelunion_session_token"
   FOR EACH ROW

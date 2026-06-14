@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, ForeignKeyColumn, Generated, Table, Timestamp, UpdateDateColumn } from '@immich/sql-tools';
-import { UpdatedAtTrigger } from 'src/decorators';
+import { UpdatedAtTrigger, UpdateIdColumn } from 'src/decorators';
 import { SessionTable } from 'src/schema/tables/session.table';
 
 @Table('pixelunion_session_token')
@@ -16,4 +16,7 @@ export class PixelUnionSessionTokenTable {
 
   @UpdateDateColumn()
   updatedAt!: Generated<Timestamp>;
+
+  @UpdateIdColumn({ index: true })
+  updateId!: Generated<string>;
 }
