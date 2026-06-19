@@ -19,10 +19,12 @@
     mdiCogOutline,
     mdiDevices,
     mdiDownload,
+    mdiEmailOutline,
     mdiFeatureSearchOutline,
     mdiFormTextboxPassword,
     mdiLockSmart,
     mdiServerOutline,
+    mdiShieldAccountOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import SettingAccordionState from '../shared-components/settings/setting-accordion-state.svelte';
@@ -30,6 +32,7 @@
   import AppSettings from './app-settings.svelte';
   import DeviceList from './device-list.svelte';
   import PartnerSettings from './partner-settings.svelte';
+  import PuEmailChangeSettings from './pu-email-change-settings.svelte';
   import PuUserProfileSettings from './pu-user-profile-settings.svelte';
   import UserAPIKeyList from './user-api-key-list.svelte';
   import UserProfileSettings from './user-profile-settings.svelte';
@@ -61,8 +64,22 @@
       <UserProfileSettings />
     </SettingAccordion>
   {:else}
-    <SettingAccordion icon={mdiAccountOutline} key="account" title={$t('account')} subtitle={$t('manage_your_account')}>
+    <SettingAccordion
+      icon={mdiShieldAccountOutline}
+      key="account-security"
+      title="Account security"
+      subtitle="Manage your account security"
+    >
       <PuUserProfileSettings />
+    </SettingAccordion>
+
+    <SettingAccordion
+      icon={mdiEmailOutline}
+      key="email-address"
+      title="Email address"
+      subtitle="Change your login and billing email address"
+    >
+      <PuEmailChangeSettings />
     </SettingAccordion>
   {/if}
 

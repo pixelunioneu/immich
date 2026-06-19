@@ -6,7 +6,6 @@
     requestEmailChange,
   } from '$lib/services/pu-email-change';
   import { user } from '$lib/stores/user.store';
-  import { oauth } from '$lib/utils';
   import { clearPuOidcAccessTokenCache } from '$lib/utils/pu-oidc';
   import { Button, Field, Input, toastManager } from '@immich/ui';
   import { fade } from 'svelte/transition';
@@ -30,8 +29,9 @@
     flowState = 'needsReauth';
   };
 
-  const handleReauthenticate = async () => {
-    await oauth.authorize(globalThis.location);
+  const handleReauthenticate = () => {
+    document.cookie = 'immich_is_authenticated=; max-age=0; path=/';
+    globalThis.location.reload();
   };
 
   const resetFlow = () => {
@@ -106,7 +106,7 @@
 
 <section class="my-4">
   <div in:fade={{ duration: 500 }}>
-    <div class="sm:ms-8 flex flex-col gap-4">
+    <div class="flex flex-col gap-4">
       {#if flowState === 'needsReauth'}
         <p class="text-sm text-immich-fg/75 dark:text-immich-dark-fg/75">
           Your session needs to be refreshed before you can change your email address.
