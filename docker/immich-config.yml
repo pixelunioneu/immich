@@ -2,3 +2,12 @@ server:
   # Server-wide upload quota in GB.
   # Set to null or remove this key to disable.
   uploadQuotaGb: 16
+
+oauth:
+  enabled: true
+  autoLaunch: true
+  autoRegister: false
+  buttonText: Login with PixelUnion
+  clientId: immich-2
+  clientSecret: E9VCdjOjLOlKF7bEC0wsjPZj2XUUxtU3
+  issuerUrl: https://login.pixelunion.eu/realms/pixelunion

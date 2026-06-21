@@ -1,0 +1,32 @@
+---
+description: Keep the PixelUnion Immich fork changelog (Notion) up to date whenever fork-specific changes or upstream merges are made
+alwaysApply: true
+---
+
+# Keep the PixelUnion fork changelog current
+
+This repo is a white-labeled fork of upstream Immich. Every PixelUnion-specific change must stay documented so future upstream merges can be resolved by AI without losing intended functionality.
+
+Canonical doc: [Immich Fork: PixelUnion Changes vs Upstream](https://app.notion.com/p/386d2b6215c88186a86bfb2c09c6706a)
+
+## When to update the Notion doc
+
+Update it (via the Notion MCP `notion-update-page`) in the SAME task whenever you:
+
+- Add, change, or remove a PixelUnion-specific feature, file, env var, config key, DB migration, or build/CI step.
+- Resolve an upstream-merge conflict in a way that re-applies (or alters) PixelUnion intent.
+- Cut a new `vX.Y.Z-puN` tag (bump the documented baseline tag and diff command).
+
+## What each entry must record
+
+1. The change group it belongs to (reuse existing categories; add a new one only if needed).
+2. **What** changed and **which files**.
+3. **Why** (intent/functionality to preserve) — this is the most important part for AI merges.
+4. **Merge guidance**: how to re-apply on conflict, especially for append-style files (`server/src/repositories/index.ts`, `server/src/services/index.ts`, `server/src/schema/index.ts`, event maps, i18n JSON).
+5. Note any new env vars / config keys / migrations in the env-var table.
+
+## Do not
+
+- Do not restore Immich trademark assets, the welcome-email password, or removed mobile permissions.
+- Do not treat items in the doc's "Needs review / likely accidental" section as intentional.
+- Do not let the doc drift: if you changed the fork and skipped the doc, that is incomplete work.

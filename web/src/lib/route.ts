@@ -122,7 +122,6 @@ export const Route = {
 
   // settings
   userSettings: (params?: { isOpen?: OpenQueryParam }) => '/user-settings' + asQueryString(params),
-  googlePhotosMigration: () => '/google-photos-migration',
 
   // system
   systemSettings: (params?: { isOpen?: OpenQueryParam }) => '/admin/system-settings' + asQueryString(params),
@@ -143,6 +142,7 @@ export const Route = {
   duplicatesUtility: (params?: { index?: number }) => '/utilities/duplicates' + asQueryString(params),
   largeFileUtility: () => '/utilities/large-files',
   geolocationUtility: () => '/utilities/geolocation',
+  googlePhotosMigration: () => '/utilities/google-photos-migration',
 
   // workflows
   workflows: () => '/utilities/workflows',
