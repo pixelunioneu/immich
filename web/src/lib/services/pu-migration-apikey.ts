@@ -4,15 +4,25 @@ export const MIGRATION_API_KEY_NAME = 'google-photos-migration';
 
 const MIGRATION_API_KEY_ID_STORAGE_KEY = 'pu-google-photos-migration-api-key-id';
 
-/** Permissions required by immich-go upload from-google-photos (minimal set). */
+/** Permissions required by immich-go upload from-google-photos (see migrate-google-photos help). */
 export const MIGRATION_API_KEY_PERMISSIONS: Permission[] = [
   Permission.AssetRead,
+  Permission.AssetStatistics,
+  Permission.AssetUpdate,
   Permission.AssetUpload,
+  Permission.AssetCopy,
+  Permission.AssetReplace,
+  Permission.AssetDelete,
+  Permission.AssetDownload,
   Permission.AlbumCreate,
   Permission.AlbumRead,
   Permission.AlbumAssetCreate,
-  Permission.TagCreate,
+  Permission.ServerAbout,
+  Permission.StackCreate,
   Permission.TagAsset,
+  Permission.TagCreate,
+  Permission.UserRead,
+  Permission.ServerStorage,
 ];
 
 export function getStoredMigrationApiKeyId(): string | null {
