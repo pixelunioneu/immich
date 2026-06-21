@@ -5,12 +5,19 @@
   import { Icon, modalManager, Text } from '@immich/ui';
   import {
     mdiCellphoneArrowDownVariant,
+    mdiCloudUploadOutline,
     mdiContentDuplicate,
     mdiCrosshairsGps,
     mdiImageSizeSelectLarge,
     mdiLinkEdit,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
+
+  const migrationLink = {
+    href: Route.googlePhotosMigration(),
+    icon: mdiCloudUploadOutline,
+    label: $t('google_photos_migration'),
+  };
 
   const links = [
     { href: Route.duplicatesUtility(), icon: mdiContentDuplicate, label: $t('review_duplicates') },
@@ -20,6 +27,18 @@
   ];
 </script>
 
+<div class="border border-gray-300 dark:border-immich-dark-gray rounded-3xl pt-1 pb-6 dark:text-white">
+  <Text size="tiny" color="muted" fontWeight="medium" class="p-4">{$t('google_photos_migration')}</Text>
+
+  <a
+    href={migrationLink.href}
+    class="w-full hover:bg-gray-100 dark:hover:bg-immich-dark-gray flex items-center gap-4 p-4"
+  >
+    <span><Icon icon={migrationLink.icon} class="text-primary" size="24" /> </span>
+    {migrationLink.label}
+  </a>
+</div>
+<br />
 <div class="border border-gray-300 dark:border-immich-dark-gray rounded-3xl pt-1 pb-6 dark:text-white">
   <Text size="tiny" color="muted" fontWeight="medium" class="p-4">{$t('organize_your_library')}</Text>
 
