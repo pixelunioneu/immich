@@ -54,7 +54,9 @@ export const initLanguage = async () => {
 interface UploadRequestOptions {
   url: string;
   method?: 'POST' | 'PUT';
-  data: FormData;
+  data: FormData | Blob | File;
+  headers?: Record<string, string>;
+  responseType?: XMLHttpRequestResponseType;
   onUploadProgress?: (event: ProgressEvent<XMLHttpRequestEventTarget>) => void;
 }
 
@@ -96,7 +98,7 @@ export const cancelUploadRequests = () => {
 };
 
 export const uploadRequest = async <T>(options: UploadRequestOptions): Promise<{ data: T; status: number }> => {
-  const { onUploadProgress: onProgress, data, url } = options;
+  const { onUploadProgress: onProgress, data, url, headers, responseType = 'json' } = options;
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const unsubscribe = trackUpload(() => xhr.abort());
@@ -121,7 +123,12 @@ export const uploadRequest = async <T>(options: UploadRequestOptions): Promise<{
     }
 
     xhr.open(options.method || 'POST', url);
-    xhr.responseType = 'json';
+    xhr.responseType = responseType;
+    if (headers) {
+      for (const [key, value] of Object.entries(headers)) {
+        xhr.setRequestHeader(key, value);
+      }
+    }
     xhr.send(data);
   });
 };

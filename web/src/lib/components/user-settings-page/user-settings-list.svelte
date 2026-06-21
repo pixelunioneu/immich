@@ -4,6 +4,7 @@
   import ChangePasswordSettings from '$lib/components/user-settings-page/change-password-settings.svelte';
   import DownloadSettings from '$lib/components/user-settings-page/download-settings.svelte';
   import FeatureSettings from '$lib/components/user-settings-page/feature-settings.svelte';
+  import GooglePhotosMigrationSettings from '$lib/components/user-settings-page/google-photos-migration-settings.svelte';
   import NotificationsSettings from '$lib/components/user-settings-page/notifications-settings.svelte';
   import UserUsageStatistic from '$lib/components/user-settings-page/user-usage-statistic.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
@@ -16,6 +17,7 @@
     mdiAccountOutline,
     mdiApi,
     mdiBellOutline,
+    mdiCloudUploadOutline,
     mdiCogOutline,
     mdiDevices,
     mdiDownload,
@@ -94,6 +96,14 @@
 
   <SettingAccordion icon={mdiApi} key="api-keys" title={$t('api_keys')} subtitle={$t('manage_your_api_keys')}>
     <UserAPIKeyList bind:keys />
+  </SettingAccordion>
+
+  <SettingAccordion
+    icon={mdiCloudUploadOutline}
+    key="google-photos-migration"
+    title={$t('google_photos_migration')}
+  >
+    <GooglePhotosMigrationSettings />
   </SettingAccordion>
 
   <SettingAccordion

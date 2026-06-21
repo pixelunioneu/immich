@@ -122,6 +122,7 @@ export const Route = {
 
   // settings
   userSettings: (params?: { isOpen?: OpenQueryParam }) => '/user-settings' + asQueryString(params),
+  googlePhotosMigration: () => '/google-photos-migration',
 
   // system
   systemSettings: (params?: { isOpen?: OpenQueryParam }) => '/admin/system-settings' + asQueryString(params),
