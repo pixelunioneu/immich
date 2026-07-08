@@ -84,6 +84,11 @@ COPY --from=cli /output/cli-pruned ./cli
 COPY --from=plugins /usr/src/app/plugins/dist /build/corePlugin/dist
 COPY --from=plugins /usr/src/app/plugins/manifest.json /build/corePlugin/manifest.json
 RUN ln -s ../../cli/bin/immich server/bin/immich
+
+ENV NODE_COMPILE_CACHE=/usr/src/app/server/.compile-cache
+RUN node server/bin/warm-compile-cache.js && \
+  chmod -R a+rX /usr/src/app/server/.compile-cache
+
 COPY LICENSE /licenses/LICENSE.txt
 COPY LICENSE /LICENSE
 

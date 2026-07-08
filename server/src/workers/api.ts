@@ -19,10 +19,13 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch((error) => {
-  if (!isStartUpError(error)) {
-    console.error(error);
-  }
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit(1);
-});
+// eslint-disable-next-line unicorn/prefer-module
+if (require.main === module) {
+  bootstrap().catch((error) => {
+    if (!isStartUpError(error)) {
+      console.error(error);
+    }
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(1);
+  });
+}

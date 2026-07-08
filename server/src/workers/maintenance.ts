@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { isMainThread } from 'node:worker_threads';
 import { configureExpress, configureTelemetry } from 'src/app.common';
 import { MaintenanceModule } from 'src/app.module';
 import { MaintenanceWorkerService } from 'src/maintenance/maintenance-worker.service';
@@ -19,10 +20,11 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch((error) => {
-  if (!isStartUpError(error)) {
-    console.error(error);
-  }
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit(1);
-});
+if (!isMainThread) {
+  bootstrap().catch((error) => {
+    if (!isStartUpError(error)) {
+      console.error(error);
+    }
+    process.exit(1);
+  });
+}
