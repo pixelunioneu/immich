@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { themeManager } from '$lib/managers/theme-manager.svelte';
+  import { Theme, themeManager } from '@immich/ui';
 
   interface Props {
     variant?: 'icon' | 'inline';
@@ -20,7 +20,7 @@
   const sizeClass = $derived(sizeClasses[size] || sizeClasses.medium);
 
   const logoSrc = $derived.by(() => {
-    const isDark = themeManager.isDark;
+    const isDark = themeManager.value === Theme.Dark;
     const suffix = isDark ? '-dark' : '';
     if (variant === 'icon') {
       if (animated) {

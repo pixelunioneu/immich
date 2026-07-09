@@ -5,7 +5,7 @@
     PuReauthRequiredError,
     requestEmailChange,
   } from '$lib/services/pu-email-change';
-  import { user } from '$lib/stores/user.store';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { clearPuOidcAccessTokenCache } from '$lib/utils/pu-oidc';
   import { Button, Field, Input, toastManager } from '@immich/ui';
   import { fade } from 'svelte/transition';
@@ -20,7 +20,9 @@
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
   const canRequestCode = $derived(
-    flowState === 'idle' && isValidEmail(newEmail) && newEmail.trim().toLowerCase() !== $user.email.toLowerCase(),
+    flowState === 'idle' &&
+      isValidEmail(newEmail) &&
+      newEmail.trim().toLowerCase() !== authManager.user.email.toLowerCase(),
   );
 
   const canConfirmCode = $derived(flowState === 'awaitingCode' && verificationCode.trim().length === 6);
@@ -70,7 +72,7 @@
       const result = await confirmEmailChange(verificationCode);
       const { summary } = result;
 
-      $user = { ...$user, email: summary.newEmail };
+      authManager.setUser({ ...authManager.user, email: summary.newEmail });
       clearPuOidcAccessTokenCache();
       resetFlow();
 

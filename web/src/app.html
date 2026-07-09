@@ -1,113 +1,109 @@
 <!doctype html>
-<html>
+<html class="dark">
+  <head>
+    <!-- (used for SSR) -->
+    <!-- metadata:tags -->
 
-<head>
-  <!-- (used for SSR) -->
-  <!-- metadata:tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="/favicon-144.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180.png" />
+    <link rel="preload" as="font" type="font/ttf" href="%app.font%" crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/ttf" href="%app.monofont%" crossorigin="anonymous" />
 
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
-  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
-  <link rel="icon" type="image/png" sizes="144x144" href="/favicon-144.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180.png" />
-  <link rel="preload" as="font" type="font/ttf" href="%app.font%" crossorigin="anonymous" />
-  <link rel="preload" as="font" type="font/ttf" href="%app.monofont%" crossorigin="anonymous" />
-  %sveltekit.head%
-  <style>
-    /* prevent FOUC */
-    html {
-      height: 100%;
-      width: 100%;
-    }
-
-    body,
-    html {
-      margin: 0;
-      padding: 0;
-    }
-
-    @keyframes delayedVisibility {
-      to {
-        visibility: visible;
+    <script>
+      try {
+        const preference = JSON.parse(localStorage.getItem('immich-ui-theme'));
+        const prefersDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (preference === 'light' || (preference !== 'dark' && !prefersDark)) {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        }
+      } catch {
+        // noop
       }
-    }
+    </script>
 
-    #stencil {
-      --stencil-width: 150px;
-      display: flex;
-      width: var(--stencil-width);
-      margin-left: auto;
-      margin-right: auto;
-      margin-top: calc(50vh - var(--stencil-width) / 2);
-      margin-bottom: 100vh;
-      place-items: center;
-      justify-content: center;
-      overflow: hidden;
-      visibility: hidden;
-      animation:
-        0s linear 0.3s forwards delayedVisibility,
-        loadspin 8s linear infinite;
-    }
+    %sveltekit.head%
 
-    .bg-immich-bg {
-      background-color: white;
-    }
-
-    .dark .dark\:bg-immich-dark-bg {
-      background-color: black;
-    }
-  </style>
-  <script>
-    /**
-     * Prevent FOUC on page load.
-     */
-    const colorThemeKeyName = 'color-theme';
-
-    let theme = localStorage.getItem(colorThemeKeyName);
-    if (!theme) {
-      theme = { value: 'light', system: true };
-    } else if (theme === 'dark' || theme === 'light') {
-      theme = { value: theme, system: false };
-      localStorage.setItem(colorThemeKeyName, JSON.stringify(theme));
-    } else {
-      theme = JSON.parse(theme);
-    }
-
-    let themeValue = theme.value;
-    if (theme.system) {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        themeValue = 'dark';
-      } else {
-        themeValue = 'light';
+    <style>
+      /* prevent FOUC */
+      html {
+        height: 100%;
+        width: 100%;
       }
-    }
 
-    if (themeValue === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-  </script>
-  <script type="text/javascript" id="ilert-widget-embed-status" async defer
-    src="https://status.pixelunion.eu/static/widgets/embed-status/index.js?pos=bottom_right&ibc=f57c00&itc=fafafa&mbc=0288d1&mtc=fafafa"></script>
+      html.dark {
+        background-color: black;
+      }
 
-  <link rel="stylesheet" href="/custom.css" />
-</head>
+      html.light {
+        background-color: white;
+      }
 
-<noscript
-  class="absolute z-1000 flex h-screen w-screen place-content-center place-items-center bg-immich-bg dark:bg-immich-dark-bg dark:text-immich-dark-fg">
-  To use Immich, you must enable JavaScript or use a JavaScript compatible browser.
-</noscript>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+      }
 
-<body class="bg-light text-dark">
-  <div id="stencil">
-    <img src="/pixelunion-animated.svg" alt="Logo" width="150" height="150" />
-  </div>
-  <div>%sveltekit.body%</div>
-</body>
+      @keyframes delayedVisibility {
+        to {
+          visibility: visible;
+        }
+      }
 
+      @keyframes loadspin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      #stencil {
+        --stencil-width: 150px;
+        display: flex;
+        width: var(--stencil-width);
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: calc(50vh - var(--stencil-width) / 2);
+        margin-bottom: 100vh;
+        place-items: center;
+        justify-content: center;
+        overflow: hidden;
+        visibility: hidden;
+        animation:
+          0s linear 0.3s forwards delayedVisibility,
+          loadspin 8s linear infinite;
+      }
+
+      .bg-immich-bg {
+        background-color: white;
+      }
+
+      .dark .dark\:bg-immich-dark-bg {
+        background-color: black;
+      }
+    </style>
+    <script type="text/javascript" id="ilert-widget-embed-status" async defer
+      src="https://status.pixelunion.eu/static/widgets/embed-status/index.js?pos=bottom_right&ibc=f57c00&itc=fafafa&mbc=0288d1&mtc=fafafa"></script>
+
+    <link rel="stylesheet" href="/custom.css" />
+  </head>
+
+  <noscript
+    class="absolute z-1000 flex h-screen w-screen place-content-center place-items-center bg-immich-bg dark:bg-immich-dark-bg dark:text-immich-dark-fg">
+    To use Immich, you must enable JavaScript or use a JavaScript compatible browser.
+  </noscript>
+
+  <body class="bg-light text-dark">
+    <div id="stencil">
+      <img src="/pixelunion-animated.svg" alt="Logo" width="150" height="150" />
+    </div>
+    <div>%sveltekit.body%</div>
+  </body>
 </html>

@@ -16,6 +16,9 @@ const config = {
   },
   preprocess: vitePreprocess(),
   kit: {
+    version: {
+      name: process.env.IMMICH_BUILD || process.env.npm_package_version || 'local',
+    },
     paths: {
       relative: false,
     },
@@ -32,6 +35,12 @@ const config = {
       $i18n: '../i18n',
       'chromecast-caf-sender': './node_modules/@types/chromecast-caf-sender/index.d.ts',
     },
+  },
+  onwarn: (warning, handler) => {
+    if (warning.code === 'state_referenced_locally') {
+      return;
+    }
+    handler(warning);
   },
 };
 

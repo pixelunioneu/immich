@@ -194,6 +194,7 @@ describe(ServerService.name, () => {
         configFile: false,
         trash: true,
         email: false,
+        realtimeTranscoding: false,
       });
       expect(mocks.systemMetadata.get).toHaveBeenCalled();
     });
@@ -213,6 +214,7 @@ describe(ServerService.name, () => {
         mapDarkStyleUrl: 'https://tiles.immich.cloud/v1/style/dark.json',
         mapLightStyleUrl: 'https://tiles.immich.cloud/v1/style/light.json',
         maintenanceMode: false,
+        minFaces: 3,
       });
       expect(mocks.systemMetadata.get).toHaveBeenCalled();
     });

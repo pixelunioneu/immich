@@ -1,7 +1,7 @@
 <script lang="ts">
   import GooglePhotosMigrationCancelHelpModal from '$lib/components/google-photos-migration/google-photos-migration-cancel-help-modal.svelte';
   import GooglePhotosMigrationUpload from '$lib/components/google-photos-migration/google-photos-migration-upload.svelte';
-  import UserPageLayout from '$lib/components/layouts/user-page-layout.svelte';
+  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { deleteMigrationApiKey, createMigrationApiKey } from '$lib/services/pu-migration-apikey';
   import { PuReauthRequiredError } from '$lib/services/pu-email-change';
   import {

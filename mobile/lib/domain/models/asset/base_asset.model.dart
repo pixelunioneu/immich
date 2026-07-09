@@ -1,3 +1,5 @@
+import 'package:immich_mobile/domain/models/exif.model.dart';
+
 part 'local_asset.model.dart';
 part 'remote_asset.model.dart';
 
@@ -23,9 +25,8 @@ sealed class BaseAsset {
   final DateTime updatedAt;
   final int? width;
   final int? height;
-  final int? durationInSeconds;
+  final int? durationMs;
   final bool isFavorite;
-  final String? livePhotoVideoId;
   final bool isEdited;
 
   const BaseAsset({
@@ -36,30 +37,21 @@ sealed class BaseAsset {
     required this.updatedAt,
     this.width,
     this.height,
-    this.durationInSeconds,
+    this.durationMs,
     this.isFavorite = false,
-    this.livePhotoVideoId,
     required this.isEdited,
   });
 
   bool get isImage => type == AssetType.image;
   bool get isVideo => type == AssetType.video;
 
-  bool get isMotionPhoto => livePhotoVideoId != null;
+  bool get isMotionPhoto => playbackStyle == AssetPlaybackStyle.livePhoto;
   bool get isAnimatedImage => playbackStyle == AssetPlaybackStyle.imageAnimated;
 
-  AssetPlaybackStyle get playbackStyle {
-    if (isVideo) return AssetPlaybackStyle.video;
-    if (isMotionPhoto) return AssetPlaybackStyle.livePhoto;
-    if (isImage && durationInSeconds != null && durationInSeconds! > 0) return AssetPlaybackStyle.imageAnimated;
-    if (isImage) return AssetPlaybackStyle.image;
-    return AssetPlaybackStyle.unknown;
-  }
-
   Duration get duration {
-    final durationInSeconds = this.durationInSeconds;
-    if (durationInSeconds != null) {
-      return Duration(seconds: durationInSeconds);
+    final durationMs = this.durationMs;
+    if (durationMs != null) {
+      return Duration(milliseconds: durationMs);
     }
     return const Duration();
   }
@@ -69,11 +61,25 @@ sealed class BaseAsset {
   bool get isLocalOnly => storage == AssetState.local;
   bool get isRemoteOnly => storage == AssetState.remote;
 
+  // Same asset even if localId is known on one side but not the other (heroTag isn't stable then)
+  bool refersToSameAsset(BaseAsset other) {
+    if (remoteId != null && other.remoteId != null) {
+      return remoteId == other.remoteId;
+    }
+    if (localId != null && other.localId != null) {
+      return localId == other.localId;
+    }
+    return checksum != null && checksum == other.checksum;
+  }
+
+  bool get isEditable => false;
+
   // Overridden in subclasses
   AssetState get storage;
   String? get localId;
   String? get remoteId;
   String get heroTag;
+  AssetPlaybackStyle get playbackStyle;
 
   @override
   String toString() {
@@ -84,7 +90,7 @@ sealed class BaseAsset {
   updatedAt: $updatedAt,
   width: ${width ?? "<NA>"},
   height: ${height ?? "<NA>"},
-  durationInSeconds: ${durationInSeconds ?? "<NA>"},
+  durationMs: ${durationMs ?? "<NA>"},
   isFavorite: $isFavorite,
   isEdited: $isEdited,
 }''';
@@ -92,7 +98,9 @@ sealed class BaseAsset {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     if (other is BaseAsset) {
       return name == other.name &&
           type == other.type &&
@@ -100,7 +108,7 @@ sealed class BaseAsset {
           updatedAt == other.updatedAt &&
           width == other.width &&
           height == other.height &&
-          durationInSeconds == other.durationInSeconds &&
+          durationMs == other.durationMs &&
           isFavorite == other.isFavorite &&
           isEdited == other.isEdited;
     }
@@ -115,7 +123,7 @@ sealed class BaseAsset {
         updatedAt.hashCode ^
         width.hashCode ^
         height.hashCode ^
-        durationInSeconds.hashCode ^
+        durationMs.hashCode ^
         isFavorite.hashCode ^
         isEdited.hashCode;
   }

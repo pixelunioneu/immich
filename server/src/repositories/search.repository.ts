@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Kysely, OrderByDirection, Selectable, ShallowDehydrateObject, sql } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import { randomUUID } from 'node:crypto';
 import { DummyValue, GenerateSql } from 'src/decorators';
-import { MapAsset } from 'src/dtos/asset-response.dto';
 import { AssetStatus, AssetType, AssetVisibility, VectorIndex } from 'src/enum';
 import { ConfigRepository } from 'src/repositories/config.repository';
 import { probes } from 'src/repositories/database.repository';
@@ -13,7 +11,7 @@ import { DB } from 'src/schema';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { anyUuid, searchAssetBuilder, withExifInner } from 'src/utils/database';
 import { paginationHelper } from 'src/utils/pagination';
-import { isValidInteger } from 'src/validation';
+import z from 'zod';
 
 interface GeodataApiPlaceResponse {
   id: number;
@@ -31,12 +29,10 @@ interface GeodataApiPlaceResponse {
 
 export interface SearchAssetIdOptions {
   checksum?: Buffer;
-  deviceAssetId?: string;
   id?: string;
 }
 
 export interface SearchUserIdOptions {
-  deviceId?: string;
   libraryId?: string | null;
   userIds?: string[];
 }
@@ -138,7 +134,8 @@ type BaseAssetSearchOptions = SearchDateOptions &
   SearchAlbumOptions &
   SearchOcrOptions;
 
-export type AssetSearchOptions = BaseAssetSearchOptions & SearchRelationOptions;
+export type AssetSearchOptions = Omit<BaseAssetSearchOptions, 'visibility'> &
+  SearchRelationOptions & { visibility?: AssetVisibility | 'not-locked' };
 
 export type AssetSearchBuilderOptions = Omit<AssetSearchOptions, 'orderDirection'>;
 
@@ -146,11 +143,11 @@ export type SmartSearchOptions = SearchDateOptions &
   SearchEmbeddingOptions &
   SearchExifOptions &
   SearchOneToOneRelationOptions &
-  SearchStatusOptions &
+  Omit<SearchStatusOptions, 'visibility'> &
   SearchUserIdOptions &
   SearchPeopleOptions &
   SearchTagOptions &
-  SearchOcrOptions;
+  SearchOcrOptions & { visibility?: AssetVisibility | 'not-locked' };
 
 export type OcrSearchOptions = SearchDateOptions & SearchOcrOptions;
 
@@ -262,20 +259,11 @@ export class SearchRepository {
     ],
   })
   async searchRandom(size: number, options: AssetSearchOptions) {
-    const uuid = randomUUID();
-    const builder = searchAssetBuilder(this.db, options);
-    const lessThan = builder
+    return searchAssetBuilder(this.db, options)
       .selectAll('asset')
-      .where('asset.id', '<', uuid)
       .orderBy(sql`random()`)
-      .limit(size);
-    const greaterThan = builder
-      .selectAll('asset')
-      .where('asset.id', '>', uuid)
-      .orderBy(sql`random()`)
-      .limit(size);
-    const { rows } = await sql<MapAsset>`${lessThan} union all ${greaterThan} limit ${size}`.execute(this.db);
-    return rows;
+      .limit(size)
+      .execute();
   }
 
   @GenerateSql({
@@ -315,7 +303,7 @@ export class SearchRepository {
     ],
   })
   searchSmart(pagination: SearchPaginationOptions, options: SmartSearchOptions) {
-    if (!isValidInteger(pagination.size, { min: 1, max: 1000 })) {
+    if (!z.int().min(1).max(1000).safeParse(pagination.size).success) {
       throw new Error(`Invalid value for 'size': ${pagination.size}`);
     }
 
@@ -350,7 +338,7 @@ export class SearchRepository {
     ],
   })
   searchFaces({ userIds, embedding, numResults, maxDistance, hasPerson, minBirthDate }: FaceEmbeddingSearch) {
-    if (!isValidInteger(numResults, { min: 1, max: 1000 })) {
+    if (!z.int().min(1).max(1000).safeParse(numResults).success) {
       throw new Error(`Invalid value for 'numResults': ${numResults}`);
     }
 
