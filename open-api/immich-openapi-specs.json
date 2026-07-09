@@ -26449,6 +26449,7 @@
           },
           "uploadQuotaGb": {
             "description": "Server-wide upload quota in GB",
+            "maximum": 9007199254740991,
             "minimum": 1,
             "nullable": true,
             "type": "integer"
