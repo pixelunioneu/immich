@@ -14,9 +14,10 @@ WORKDIR /usr/src/app
 COPY ./package* ./pnpm* .pnpmfile.cjs ./
 COPY ./web ./web/
 COPY ./i18n ./i18n/
-COPY ./open-api ./open-api/
-RUN SHARP_IGNORE_GLOBAL_LIBVIPS=true pnpm --filter @immich/sdk --filter immich-web --frozen-lockfile --force install && \
-  pnpm --filter @immich/sdk --filter immich-web build
+COPY ./packages ./packages/
+RUN SHARP_IGNORE_GLOBAL_LIBVIPS=true pnpm --filter @immich/sdk --filter immich-web --frozen-lockfile --force install
+RUN pnpm --filter @immich/sdk build
+RUN pnpm --filter immich-web build
 
 RUN ls -la
 
