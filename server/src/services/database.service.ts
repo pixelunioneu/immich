@@ -71,6 +71,10 @@ export class DatabaseService extends BaseService {
       );
     }
 
+    await this.migrate();
+  }
+
+  async migrate(): Promise<void> {
     await this.databaseRepository.withLock(DatabaseLock.Migrations, async () => {
       const extension = await this.databaseRepository.getVectorExtension();
       const name = EXTENSION_NAMES[extension];
