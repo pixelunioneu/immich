@@ -3,10 +3,8 @@ name: Docker PU
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-  pull_request:
-  release:
-    types: [published]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-pu[0-9]+'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,6 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - id: found_paths
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         with:
           filters: |
@@ -48,7 +47,7 @@ jobs:
 
       - name: Check if we should force jobs to run
         id: should_force
-        run: echo "should_force=${{ steps.found_paths.outputs.workflow == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'release' }}" >> "$GITHUB_OUTPUT"
+        run: echo "should_force=${{ steps.found_paths.outputs.workflow == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}" >> "$GITHUB_OUTPUT"
 
       - name: Set API url
         id: set_api_url
