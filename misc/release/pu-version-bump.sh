@@ -30,12 +30,20 @@ git push origin "$tag"
 
 echo "Tag ${tag} pushed — Docker PU pipeline starts automatically."
 if command -v gh >/dev/null; then
-  sleep 10
-  run_url=$(gh run list --workflow docker-pu.yml --branch "$tag" --limit 1 \
-    --json url --jq '.[0].url' 2>/dev/null || true)
+  echo "Waiting for Docker PU pipeline..."
+  deadline=$((SECONDS + 120))
+  run_url=""
+  while (( SECONDS < deadline )); do
+    run_url=$(gh run list --workflow docker-pu.yml --branch "$tag" --limit 1 \
+      --json url --jq '.[0].url // empty' 2>/dev/null || true)
+    if [[ -n "$run_url" ]]; then
+      break
+    fi
+    sleep 3
+  done
   if [[ -n "$run_url" ]]; then
     echo "Pipeline run: $run_url"
   else
-    echo "Run not visible yet; check: gh run list --workflow docker-pu.yml"
+    echo "Pipeline not visible after 2 minutes; check: gh run list --workflow docker-pu.yml"
   fi
 fi
