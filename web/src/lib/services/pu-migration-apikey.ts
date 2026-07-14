@@ -11,7 +11,6 @@ export const MIGRATION_API_KEY_PERMISSIONS: Permission[] = [
   Permission.AssetUpdate,
   Permission.AssetUpload,
   Permission.AssetCopy,
-  Permission.AssetReplace,
   Permission.AssetDelete,
   Permission.AssetDownload,
   Permission.AlbumCreate,
