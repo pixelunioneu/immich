@@ -108,6 +108,11 @@ export const envData: EnvData = {
   puApiHost: null,
   puTenantName: null,
   puServiceAccountTokenPath: '/var/run/secrets/kubernetes.io/serviceaccount/token',
+
+  ephemeralMicroservices: {
+    enabled: false,
+    wakeFifoPath: '/tmp/immich_microservices.wake',
+  },
 };
 
 export const mockEnvData = (config: Partial<EnvData>) => ({ ...envData, ...config });

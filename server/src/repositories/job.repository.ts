@@ -2,6 +2,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { ModuleRef, Reflector } from '@nestjs/core';
 import { JobsOptions, Queue, Worker } from 'bullmq';
+import { closeSync, constants, openSync, writeSync } from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
 import { JobConfig } from 'src/decorators';
 import { QueueJobResponseDto, QueueJobSearchDto } from 'src/dtos/queue.dto';
@@ -27,6 +28,7 @@ export class JobRepository {
   private handlers: Partial<Record<JobName, JobMapItem>> = {};
   private workerWatcher?: ReturnType<typeof setInterval>;
   private microservicesPresent = true;
+  private worker?: ImmichWorker;
 
   constructor(
     private moduleRef: ModuleRef,
@@ -35,6 +37,7 @@ export class JobRepository {
     private logger: LoggingRepository,
   ) {
     this.logger.setContext(JobRepository.name);
+    this.worker = this.configRepository.getWorker();
   }
 
   setup(services: (new (...args: any[]) => unknown)[]) {
@@ -223,6 +226,38 @@ export class JobRepository {
     }
 
     await Promise.all(promises);
+
+    this.notifyMicroservicesWake();
+  }
+
+  /**
+   * Wakes the ephemeral-microservices watcher (server/bin/ephemeral-microservices.sh) by
+   * writing to its FIFO, so it can start a microservices worker on demand instead of one
+   * running continuously. Only the `api` worker notifies (a `microservices` worker is
+   * already processing). Best-effort and non-blocking: the FIFO may not exist (feature
+   * disabled or watcher not deployed) or have no reader yet, in which case this is a no-op.
+   */
+  private notifyMicroservicesWake(): void {
+    const { ephemeralMicroservices } = this.configRepository.getEnv();
+    if (this.worker !== ImmichWorker.Api || !ephemeralMicroservices.enabled) {
+      return;
+    }
+
+    let fd: number | undefined;
+    try {
+      fd = openSync(ephemeralMicroservices.wakeFifoPath, constants.O_WRONLY | constants.O_NONBLOCK);
+      writeSync(fd, '1\n');
+    } catch (error) {
+      this.logger.debug(`Skipping microservices wake notify: ${error}`);
+    } finally {
+      if (fd !== undefined) {
+        try {
+          closeSync(fd);
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
 
   async queue(item: JobItem): Promise<void> {

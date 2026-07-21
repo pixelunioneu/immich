@@ -132,6 +132,11 @@ export interface EnvData {
   puApiHost: string | null;
   puTenantName: string | null;
   puServiceAccountTokenPath: string;
+
+  ephemeralMicroservices: {
+    enabled: boolean;
+    wakeFifoPath: string;
+  };
 }
 
 const productionKeys = {
@@ -387,6 +392,11 @@ const getEnv = (): EnvData => {
     puTenantName: dto.PU_TENANT_NAME || null,
     puServiceAccountTokenPath:
       dto.PU_SERVICE_ACCOUNT_TOKEN_PATH || '/var/run/secrets/kubernetes.io/serviceaccount/token',
+
+    ephemeralMicroservices: {
+      enabled: !!dto.IMMICH_EPHEMERAL_MICROSERVICES,
+      wakeFifoPath: dto.WAKE_FIFO_PATH || '/tmp/immich_microservices.wake',
+    },
   };
 };
 

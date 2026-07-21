@@ -2,11 +2,21 @@
 
 # Ephemeral Microservices Orchestrator
 # ------------------------------------
-# Runs inside the Immich server container. It watches BullMQ queue statistics
-# via `immich-admin queue-stats --total <state>` and spins up a temporary
-# microservices worker process when there is queued work. After the queues
-# drain (waiting + active == 0) and remain idle for a configurable time, it
-# gracefully stops the microservices process.
+# Runs inside the Immich API container (same-container scope; no
+# Kubernetes/Docker-API-driven pod scaling). It starts a temporary
+# `microservices` worker subprocess when the API notifies it of newly
+# enqueued work, and stops it after the queues drain and stay idle for a
+# configurable period.
+#
+# Start trigger is push-based: the API writes to a FIFO (named pipe) when it
+# enqueues a job (see `notifyMicroservicesWake()` in job.repository.ts). This
+# script blocks on that FIFO instead of polling Redis, so it costs zero CPU
+# and zero Redis queries while idle. A wake is trusted as-is (the job that
+# triggered it was just enqueued) -- no confirmatory Redis check is made.
+#
+# The stop side is unchanged: while the subprocess is running, the loop polls
+# BullMQ queue totals (via `immich-admin queue-stats`) on CHECK_INTERVAL to
+# detect drain + idle, since that side isn't latency-sensitive.
 #
 # Assumptions:
 #  - The main container process is already running the API (only) or at least
@@ -16,18 +26,12 @@
 #  - The build artifacts exist at server/dist (normal for released images).
 #
 # Environment variables (override as needed):
-#   CHECK_INTERVAL          Seconds between queue polling (default: 15)
-#   WAITING_THRESHOLD       Minimum total waiting jobs to trigger start (default: 1)
+#   WAKE_FIFO_PATH          Path to the wake FIFO (default: /tmp/immich_microservices.wake)
+#   CHECK_INTERVAL          Seconds between idle-drain polls while running (default: 10)
 #   IDLE_AFTER_COMPLETE     Continuous idle seconds (waiting=0 & active=0) before stopping (default: 60)
 #   GRACEFUL_TIMEOUT        Seconds to wait after SIGTERM before SIGKILL (default: 30)
 #   VERBOSE                 If set to non-empty, enables extra logging
 #   EXTRA_START_ENV         Extra env vars to export when starting microservices (format KEY=VAL space separated)
-#
-# Special-case queue: backgroundTask
-#   - If any waiting jobs exist for backgroundTask, the microservices worker will be started even if
-#     the aggregate WAITING_THRESHOLD is not met.
-#   - If the start was triggered solely by backgroundTask (no other queues waiting), the keep-alive
-#     HTTP probe will be skipped.
 #
 # Exit codes:
 #   0  Normal exit (terminated by signal or EOF)
@@ -35,11 +39,10 @@
 
 set -euo pipefail
 
+WAKE_FIFO_PATH="${WAKE_FIFO_PATH:-/tmp/immich_microservices.wake}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-10}"
-WAITING_THRESHOLD="${WAITING_THRESHOLD:-1}"
 IDLE_AFTER_COMPLETE="${IDLE_AFTER_COMPLETE:-60}"
 GRACEFUL_TIMEOUT="${GRACEFUL_TIMEOUT:-30}"
-JITTER_MAX_SECONDS="${JITTER_MAX_SECONDS:-5}"  # Maximum random jitter added to each interval sleep
 PID_FILE="/tmp/immich_ephemeral_microservices.pid"
 LOG_TAG="[ephemeral-microservices]"
 VERBOSE=1
@@ -84,20 +87,6 @@ get_total() {
   echo "$value"
 }
 
-# Return waiting count for a specific queue (uses --queue flag of queue-stats.js)
-get_queue_waiting() {
-  local q="$1" value
-  if ! value="$(node ./server/scripts/queue-stats.js --queue "$q" --total waiting 2>/dev/null | tr -d '\r')"; then
-    echo "-1"
-    return 0
-  fi
-  if [[ ! "$value" =~ ^[0-9]+$ ]]; then
-    echo "-1"
-    return 0
-  fi
-  echo "$value"
-}
-
 micro_running() {
   if [[ -f "$PID_FILE" ]]; then
     local pid
@@ -114,7 +103,7 @@ start_micro() {
     vlog "Microservices already running (pid $(<"$PID_FILE"))"
     return 0
   fi
-  log "Starting microservices worker (threshold exceeded)"
+  log "Starting microservices worker (wake received)"
   # Start only the microservices worker by constraining IMMICH_WORKERS_INCLUDE.
   # Use a subshell to isolate environment.
   (
@@ -178,67 +167,32 @@ stop_micro() {
   rm -f "$PID_FILE" || true
 }
 
-keep_alive() {
-  local status
-  status=$(curl -m 5 -s -o /dev/null -w "%{http_code}" "$KEEP_ALIVE_URL" || true)
-  if [[ -z "$status" || "$status" == "000" ]]; then
-    vlog "Keep-alive: no response from $KEEP_ALIVE_URL"
-    return 1
-  fi
-  if [[ "$status" -ge 500 ]]; then
-    vlog "Keep-alive: server error status=$status url=$KEEP_ALIVE_URL"
-    return 1
-  fi
-  if [[ "$status" -ge 400 ]]; then
-    vlog "Keep-alive: client error status=$status url=$KEEP_ALIVE_URL"
-    return 1
-  fi
-  vlog "Keep-alive: OK status=$status"
-  return 0
-}
+if [[ ! -p "$WAKE_FIFO_PATH" ]]; then
+  vlog "Creating wake FIFO at $WAKE_FIFO_PATH"
+  rm -f "$WAKE_FIFO_PATH"
+  mkfifo "$WAKE_FIFO_PATH"
+fi
 
-log "Starting ephemeral microservices monitor. Interval=${CHECK_INTERVAL}s Threshold=${WAITING_THRESHOLD} Idle=${IDLE_AFTER_COMPLETE}s"
+log "Starting ephemeral microservices monitor. WakeFifo=${WAKE_FIFO_PATH} Interval=${CHECK_INTERVAL}s Idle=${IDLE_AFTER_COMPLETE}s"
 
 idle_start=0
 
 while true; do
-  waiting_total=$(get_total waiting)
-  active_total=$(get_total active)
-  background_waiting=$(get_queue_waiting backgroundTask)
-
-  if [[ $waiting_total -lt 0 || $active_total -lt 0 ]]; then
-    error "Failed to read queue stats (waiting=$waiting_total active=$active_total). Will retry."
-    sleep "$CHECK_INTERVAL"
-    continue
-  fi
-
-  vlog "Queue totals: waiting=$waiting_total active=$active_total background_waiting=$background_waiting running=$(micro_running && echo yes || echo no)"
-
-  start_due_to_background=0
-  start_needed=0
-
-  # Start if backgroundTask has work regardless of threshold.
-  if [[ $background_waiting -gt 0 ]]; then
-    start_needed=1
-    start_due_to_background=1
-  fi
-
-  # Start if global threshold exceeded.
-  if [[ $waiting_total -ge $WAITING_THRESHOLD ]]; then
-    start_needed=1
-  fi
-
-  if [[ $start_needed -eq 1 ]]; then
-    start_micro
-    if [[ $start_due_to_background -eq 0 && -n "${KEEP_ALIVE_URL:-}" ]]; then
-      keep_alive || vlog "Keep-alive check failed"
-    else
-      vlog "Keep-alive skipped (backgroundTask-only trigger)"
-    fi
-    idle_start=0
-  fi
-
   if micro_running; then
+    # Subprocess is up: wait for a wake with a timeout so we still poll for
+    # drain/idle. A wake received here is a harmless no-op (already running).
+    read -r -t "$CHECK_INTERVAL" _line < "$WAKE_FIFO_PATH" || true
+
+    waiting_total=$(get_total waiting)
+    active_total=$(get_total active)
+
+    if [[ $waiting_total -lt 0 || $active_total -lt 0 ]]; then
+      error "Failed to read queue stats (waiting=$waiting_total active=$active_total). Will retry."
+      continue
+    fi
+
+    vlog "Queue totals: waiting=$waiting_total active=$active_total"
+
     if [[ $waiting_total -eq 0 && $active_total -eq 0 ]]; then
       if [[ $idle_start -eq 0 ]]; then
         idle_start=$(date +%s)
@@ -259,10 +213,12 @@ while true; do
       fi
       idle_start=0
     fi
+  else
+    # Subprocess is not up: block indefinitely on the FIFO. Zero CPU, zero
+    # Redis queries while truly idle.
+    vlog "Waiting for wake on $WAKE_FIFO_PATH"
+    read -r _line < "$WAKE_FIFO_PATH" || true
+    start_micro
+    idle_start=0
   fi
-
-  # Sleep with random jitter (0..JITTER_MAX_SECONDS) to avoid synchronized polling storms
-  jitter=$(( RANDOM % (JITTER_MAX_SECONDS + 1) ))
-  vlog "Sleeping for base=${CHECK_INTERVAL}s + jitter=${jitter}s"
-  sleep $(( CHECK_INTERVAL + jitter ))
 done

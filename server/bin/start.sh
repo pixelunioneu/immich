@@ -53,6 +53,24 @@ else
   log_message "skipping get-cpus.sh - not found in PATH or failed: using default UV_THREADPOOL_SIZE"
 fi
 
+# Ephemeral microservices: opt-in, same-container watcher that forks a
+# `microservices` worker subprocess on demand instead of always running one.
+# Only makes sense when this process itself is starting api-only (i.e. it
+# isn't already running the microservices worker).
+is_api_only_worker() {
+  local include="${IMMICH_WORKERS_INCLUDE:-api,microservices}"
+  local exclude="${IMMICH_WORKERS_EXCLUDE:-}"
+  [[ ",${include}," == *",api,"* ]] || return 1
+  [[ ",${exclude}," == *",microservices,"* ]] && return 0
+  [[ ",${include}," != *",microservices,"* ]] && return 0
+  return 1
+}
+
+if [ "$QUIET" = "false" ] && [ "${IMMICH_EPHEMERAL_MICROSERVICES:-false}" = "true" ] && is_api_only_worker; then
+  log_message "Starting ephemeral microservices watcher"
+  "${SERVER_HOME}/bin/ephemeral-microservices.sh" &
+fi
+
 if [ -f "${SERVER_HOME}/dist/main.js" ]; then
   if [ "$QUIET" = "true" ]; then
     exec node --no-warnings "${SERVER_HOME}/dist/main.js" "$@"
