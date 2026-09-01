@@ -43,7 +43,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
   final _log = Logger("AuthenticationNotifier");
 
-  static const Duration _timeoutDuration = Duration(seconds: 7);
+  static const Duration _timeoutDuration = Duration(seconds: 30);
 
   AuthNotifier(
     this._authService,
