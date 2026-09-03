@@ -1,6 +1,6 @@
 import { getPuOidcAccessToken } from '$lib/utils/pu-oidc';
 
-export const PU_MGMT_API_BASE = 'https://api.mgmt.tech.pixelunion.eu';
+export const PU_MGMT_API_BASE = 'https://api.prd.tech.pixelunion.eu';
 
 export class PuReauthRequiredError extends Error {
   constructor() {
