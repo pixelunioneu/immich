@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { defaults } from 'src/config';
+import { defaults } from 'src/dtos/config.dto';
 import { AssetFile } from 'src/database';
 import { AssetMediaStatus, AssetRejectReason, AssetUploadAction } from 'src/dtos/asset-media-response.dto';
 import { AssetMediaCreateDto, AssetMediaSize, UploadFieldName } from 'src/dtos/asset-media.dto';
@@ -166,8 +166,8 @@ const assetEntity = Object.freeze({
   duration: null,
   files: [] as AssetFile[],
   exifInfo: {
-    latitude: 49.533_547,
-    longitude: 10.703_075,
+    latitude: 49.533547,
+    longitude: 10.703075,
   },
   livePhotoVideoId: null,
 } as MapAsset);
@@ -272,6 +272,10 @@ describe(AssetMediaService.name, () => {
         'random-uuid.jpg',
       );
     });
+
+    it('should accept filenames with just an extension', () => {
+      expect(sut.getUploadFilename(uploadFile.filename(UploadFieldName.ASSET_DATA, '.jpg'))).toEqual('random-uuid.jpg');
+    });
   });
 
   describe('getUploadFolder', () => {
@@ -363,6 +367,12 @@ describe(AssetMediaService.name, () => {
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(mocks.asset.create).not.toHaveBeenCalled();
+      expect(mocks.asset.remove).not.toHaveBeenCalled();
+      expect(mocks.job.queue).toHaveBeenCalledWith({
+        name: JobName.FileDelete,
+        data: { files: [file.originalPath, undefined] },
+      });
+      expect(mocks.event.emit).not.toHaveBeenCalled();
       expect(mocks.user.updateUsage).not.toHaveBeenCalledWith(authStub.user1.user.id, file.size);
       expect(mocks.storage.utimes).not.toHaveBeenCalledWith(
         file.originalPath,

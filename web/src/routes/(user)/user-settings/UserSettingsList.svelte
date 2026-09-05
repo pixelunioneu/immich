@@ -27,7 +27,7 @@
   import AppSettings from './AppSettings.svelte';
   import ChangePasswordSettings from './ChangePasswordSettings.svelte';
   import DeviceList from './DeviceList.svelte';
-  import PartnerSettings from './PartnerSettings.svelte';
+  import SharingSettings from './SharingSettings.svelte';
   import PuEmailChangeSettings from '$lib/components/user-settings-page/pu-email-change-settings.svelte';
   import PuUserProfileSettings from '$lib/components/user-settings-page/pu-user-profile-settings.svelte';
   import UserApiKeyList from './UserApiKeyList.svelte';
@@ -53,8 +53,8 @@
   <SettingAccordion
     icon={mdiShieldAccountOutline}
     key="account-security"
-    title="Account security"
-    subtitle="Manage your account security"
+    title={$t('pu_account_security')}
+    subtitle={$t('pu_account_security_description')}
   >
     <PuUserProfileSettings />
   </SettingAccordion>
@@ -62,8 +62,8 @@
   <SettingAccordion
     icon={mdiEmailOutline}
     key="email-address"
-    title="Email address"
-    subtitle="Change your login and billing email address"
+    title={$t('pu_email_address')}
+    subtitle={$t('pu_email_address_description')}
   >
     <PuEmailChangeSettings />
   </SettingAccordion>
@@ -118,7 +118,7 @@
   <NotificationsSettings />
 </SettingAccordion>
 
-{#if featureFlagsManager.value.oauth}
+{#if featureFlagsManager.value.passwordLogin}
   <SettingAccordion
     icon={mdiFormTextboxPassword}
     key="password"
@@ -130,15 +130,6 @@
 {/if}
 
 <SettingAccordion
-  icon={mdiAccountGroupOutline}
-  key="partner-sharing"
-  title={$t('partner_sharing')}
-  subtitle={$t('manage_sharing_with_partners')}
->
-  <PartnerSettings />
-</SettingAccordion>
-
-<SettingAccordion
   icon={mdiLockSmart}
   key="user-pin-code-settings"
   title={$t('user_pin_code_settings')}
@@ -146,4 +137,13 @@
   autoScrollTo={true}
 >
   <ChangePinCodeSettings />
+</SettingAccordion>
+
+<SettingAccordion
+  icon={mdiAccountGroupOutline}
+  key={OpenQueryParam.SHARING}
+  title={$t('sharing')}
+  subtitle={$t('manage_sharing_with_other_users')}
+>
+  <SharingSettings />
 </SettingAccordion>

@@ -25,6 +25,7 @@ describe(StorageService.name, () => {
           storage: {
             ignoreMountCheckErrors: false,
             mediaLocation: '/data',
+            minimumDiskSpaceBytes: 50 * 1024 * 1024,
           },
         }),
       );
@@ -90,6 +91,7 @@ describe(StorageService.name, () => {
           storage: {
             ignoreMountCheckErrors: false,
             mediaLocation: '/data',
+            minimumDiskSpaceBytes: 50 * 1024 * 1024,
           },
         }),
       );
@@ -165,7 +167,7 @@ describe(StorageService.name, () => {
       mocks.systemMetadata.get.mockResolvedValue({ mountChecks: { upload: true } });
       mocks.config.getEnv.mockReturnValue(
         mockEnvData({
-          storage: { ignoreMountCheckErrors: true },
+          storage: { ignoreMountCheckErrors: true, minimumDiskSpaceBytes: 50 * 1024 * 1024 },
         }),
       );
       mocks.asset.getFileSamples.mockResolvedValue([]);

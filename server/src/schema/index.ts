@@ -7,6 +7,7 @@ import {
 } from 'src/schema/enums';
 import {
   album_user_after_insert,
+  album_user_delete,
   album_user_delete_audit,
   asset_delete_audit,
   asset_face_audit,
@@ -20,6 +21,7 @@ import {
   memory_delete_audit,
   partner_delete_audit,
   person_delete_audit,
+  person_group_delete_audit,
   stack_delete_audit,
   updated_at,
   user_delete_audit,
@@ -47,6 +49,8 @@ import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
 import { AssetOcrAuditTable } from 'src/schema/tables/asset-ocr-audit.table';
 import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table';
 import { AssetTable } from 'src/schema/tables/asset.table';
+import { ClusterGroupRequestTable } from 'src/schema/tables/cluster-group-request.table';
+import { ClusterGroupTable } from 'src/schema/tables/cluster-group.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
 import { GeodataPlacesTable } from 'src/schema/tables/geodata-places.table';
 import { IntegrityReportTable } from 'src/schema/tables/integrity-report.table';
@@ -62,6 +66,8 @@ import { OcrSearchTable } from 'src/schema/tables/ocr-search.table';
 import { PartnerAuditTable } from 'src/schema/tables/partner-audit.table';
 import { PartnerTable } from 'src/schema/tables/partner.table';
 import { PersonAuditTable } from 'src/schema/tables/person-audit.table';
+import { PersonGroupAuditTable } from 'src/schema/tables/person-group-audit.table';
+import { PersonGroupTable } from 'src/schema/tables/person-group.table';
 import { PersonTable } from 'src/schema/tables/person.table';
 import { PixelUnionSessionTokenTable } from 'src/schema/tables/pixelunion-session-token.table';
 import { PluginMethodTable } from 'src/schema/tables/plugin-method.table';
@@ -87,6 +93,7 @@ import {
   VideoStreamSessionTable,
   VideoStreamVariantTable,
 } from 'src/schema/tables/video-stream.table';
+import { WorkflowLogTable } from 'src/schema/tables/workflow-log.table';
 import { WorkflowStepTable } from 'src/schema/tables/workflow-step.table';
 import { WorkflowTable } from 'src/schema/tables/workflow.table';
 
@@ -115,6 +122,8 @@ export class ImmichDatabase {
     AssetTable,
     AssetFileTable,
     AssetExifTable,
+    ClusterGroupTable,
+    ClusterGroupRequestTable,
     FaceSearchTable,
     GeodataPlacesTable,
     IntegrityReportTable,
@@ -131,7 +140,8 @@ export class ImmichDatabase {
     PartnerTable,
     PersonTable,
     PersonAuditTable,
-    PixelUnionSessionTokenTable,
+    PersonGroupTable,
+    PersonGroupAuditTable,
     SessionTable,
     SharedLinkAssetTable,
     SharedLinkTable,
@@ -155,6 +165,8 @@ export class ImmichDatabase {
     PluginMethodTable,
     WorkflowTable,
     WorkflowStepTable,
+    // --- PixelUnion additions (kept at end to avoid alphabetical-insert merge conflicts) ---
+    PixelUnionSessionTokenTable,
   ];
 
   functions = [
@@ -172,10 +184,12 @@ export class ImmichDatabase {
     memory_asset_delete_audit,
     stack_delete_audit,
     person_delete_audit,
+    person_group_delete_audit,
     user_metadata_audit,
     asset_metadata_audit,
     asset_face_audit,
     asset_ocr_delete_audit,
+    album_user_delete,
   ];
 
   enum = [album_user_role_enum, assets_status_enum, asset_face_source_type, asset_visibility_enum];
@@ -245,6 +259,11 @@ export interface DB {
 
   person: PersonTable;
   person_audit: PersonAuditTable;
+  person_group: PersonGroupTable;
+  person_group_audit: PersonGroupAuditTable;
+
+  cluster_group: ClusterGroupTable;
+  cluster_group_request: ClusterGroupRequestTable;
 
   pixelunion_session_token: PixelUnionSessionTokenTable;
 
@@ -281,4 +300,5 @@ export interface DB {
 
   workflow: WorkflowTable;
   workflow_step: WorkflowStepTable;
+  workflow_log: WorkflowLogTable;
 }

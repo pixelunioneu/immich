@@ -39,10 +39,12 @@
   let timelineManager = $state<TimelineManager>() as TimelineManager;
 
   dragAndDropFilesStore.subscribe((value) => {
-    if (value.isDragging && value.files.length > 0) {
-      handlePromiseError(fileUploadHandler({ files: value.files, albumId: album.id }));
-      dragAndDropFilesStore.set({ isDragging: false, files: [] });
+    if (!(value.isDragging && value.files.length > 0)) {
+      return;
     }
+
+    handlePromiseError(fileUploadHandler({ files: value.files, albumId: album.id }));
+    dragAndDropFilesStore.set({ isDragging: false, files: [] });
   });
 
   const handleStartSlideshow = async () => {
@@ -100,7 +102,7 @@
     <AssetSelectControlBar>
       <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
       {#if sharedLink.allowDownload}
-        <DownloadAction filename="{album.albumName}.zip" />
+        <DownloadAction filename={album.albumName} />
       {/if}
     </AssetSelectControlBar>
   {:else}

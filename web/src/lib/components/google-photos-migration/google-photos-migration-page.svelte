@@ -357,7 +357,7 @@
       <div class="mb-4 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger" role="alert">
         {error}
       </div>
-      <Button shape="round" size="small" color="secondary" onclick={() => load()}>{$t('retry_upload')}</Button>
+      <Button shape="round" size="small" color="secondary" onclick={() => load()}>{$t('retry')}</Button>
     {:else if !migration}
       <div class="rounded-2xl border border-gray-200 dark:border-subtle p-6 bg-subtle space-y-4">
         <p class="text-sm">{$t('google_photos_migration_create_intro')}</p>

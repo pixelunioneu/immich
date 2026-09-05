@@ -1,4 +1,4 @@
-import { defaults } from 'src/config';
+import { defaults } from 'src/dtos/config.dto';
 import { SystemMetadataKey } from 'src/enum';
 import { ServerService } from 'src/services/server.service';
 import { mockEnvData } from 'test/repositories/config.repository.mock';
@@ -205,9 +205,10 @@ describe(ServerService.name, () => {
       await expect(sut.getSystemConfig()).resolves.toEqual({
         loginPageMessage: '',
         oauthButtonText: 'Login with OAuth',
+        oauthAccountManagementUrl: '',
         trashDays: 30,
         userDeleteDelay: 7,
-        isInitialized: undefined,
+        isInitialized: false,
         isOnboarded: false,
         externalDomain: '',
         publicUsers: true,
@@ -217,6 +218,19 @@ describe(ServerService.name, () => {
         minFaces: 3,
       });
       expect(mocks.systemMetadata.get).toHaveBeenCalled();
+    });
+
+    it('should be initialized once an admin exists', async () => {
+      mocks.user.hasAdmin.mockResolvedValue(true);
+
+      await expect(sut.getSystemConfig()).resolves.toMatchObject({ isInitialized: true });
+    });
+
+    it('should be initialized when setup is disabled', async () => {
+      mocks.config.getEnv.mockReturnValue(mockEnvData({ setup: { allow: false } }));
+      mocks.user.hasAdmin.mockResolvedValue(false);
+
+      await expect(sut.getSystemConfig()).resolves.toMatchObject({ isInitialized: true });
     });
   });
 

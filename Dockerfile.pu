@@ -1,5 +1,5 @@
 # production-builder-base image
-FROM ghcr.io/immich-app/base-server-dev:202508191104@sha256:0608857ef682099c458f0fb319afdcaf09462bbb5670b6dcd3642029f12eee1c AS prod-builder-base
+FROM ghcr.io/immich-app/base-server-dev:202608300913@sha256:188679bfc2e7a496bdc13bd145cf59d90b2fb8f9dbf7131b2c1a368cd637b1a0 AS prod-builder-base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
   CI=1 \
   COREPACK_HOME=/tmp

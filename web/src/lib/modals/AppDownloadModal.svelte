@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { appStoreBadge, BasicModal, fdroidBadge, playStoreBadge } from '@immich/ui';
+  import { appStoreBadge, BasicModal, Constants, playStoreBadge } from '@immich/ui';
   import { t } from 'svelte-i18n';
-  interface Props {
+  type Props = {
     onClose: () => void;
-  }
+  };
   let { onClose }: Props = $props();
 </script>
 
@@ -14,12 +14,8 @@
 
     </a>
 
-    <a href="https://apps.apple.com/us/app/immich/id1613945652" target="_blank" id="app-store-link">
+    <a href={Constants.Get.iOS} target="_blank" id="app-store-link">
       <img class="mt-2 w-full" alt="Download on the App Store" src={appStoreBadge} />
-    </a>
-
-    <a href="https://f-droid.org/packages/app.alextran.immich/" target="_blank" id="fdroid-link">
-      <img class="mt-2 w-full" alt="Get it on F-Droid" src={fdroidBadge} />
     </a>
   </div>
 </BasicModal>

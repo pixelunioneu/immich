@@ -60,6 +60,10 @@ const QUEUE_NAMES = [
   'editor',
   // Newly added backgroundTask queue: triggers microservices start but suppresses keep-alive.
   'backgroundTask',
+  // Upstream v3.2: workflow engine + integrity check queues. This list mirrors the
+  // QueueName enum in server/src/enum.ts and must be re-diffed against it on every merge.
+  'workflow',
+  'integrityCheck',
 ];
 
 /**

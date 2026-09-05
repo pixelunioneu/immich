@@ -15,9 +15,10 @@ import {
   UsageByUserDto,
 } from 'src/dtos/server.dto';
 import { StorageFolder, SystemMetadataKey } from 'src/enum';
+import { DiskUsage } from 'src/repositories/storage.repository';
 import { UserStatsQueryResponse } from 'src/repositories/user.repository';
 import { BaseService } from 'src/services/base.service';
-import { asHumanReadable } from 'src/utils/bytes';
+import { asHumanReadable, HumanReadableSize } from 'src/utils/bytes';
 import { mimeTypes } from 'src/utils/mime-types';
 import {
   isDuplicateDetectionEnabled,
@@ -65,36 +66,39 @@ export class ServerService extends BaseService {
   }
 
   async getStorage(): Promise<ServerStorageResponseDto> {
-    let diskAvailableRaw = 0;
-    let diskSizeRaw = 0;
-    let diskUseRaw = 0;
+    const diskInfo = await this.getDiskInfo();
 
-    const { configFile } = this.configRepository.getEnv();
-    const { server } = await this.getConfig({ withCache: true });
-    if (configFile && server.uploadQuotaGb !== null) {
-      diskSizeRaw = server.uploadQuotaGb * 1024 ** 3;
-      diskUseRaw = await this.userRepository.getQuotaUsage();
-      diskAvailableRaw = Math.max(diskSizeRaw - diskUseRaw, 0);
-    } else {
-      const libraryBase = StorageCore.getBaseFolder(StorageFolder.Library);
-      const diskInfo = await this.storageRepository.checkDiskUsage(libraryBase);
-      diskAvailableRaw = diskInfo.available;
-      diskSizeRaw = diskInfo.total;
-      diskUseRaw = diskInfo.total - diskInfo.free;
-    }
-
-    const usagePercentage = ((diskUseRaw / diskSizeRaw) * 100).toFixed(2);
+    const usagePercentage = (((diskInfo.total - diskInfo.free) / diskInfo.total) * 100).toFixed(2);
 
     const serverInfo = new ServerStorageResponseDto();
-    serverInfo.diskAvailable = asHumanReadable(diskAvailableRaw);
-    serverInfo.diskSize = asHumanReadable(diskSizeRaw);
-    serverInfo.diskUse = asHumanReadable(diskUseRaw);
-    serverInfo.diskAvailableRaw = diskAvailableRaw;
-    serverInfo.diskSizeRaw = diskSizeRaw;
-    serverInfo.diskUseRaw = diskUseRaw;
-    serverInfo.diskUsagePercentage = Number.parseFloat(usagePercentage);
+    serverInfo.diskAvailable = asHumanReadable(diskInfo.available);
+    serverInfo.diskSize = asHumanReadable(diskInfo.total);
+    serverInfo.diskUse = asHumanReadable(diskInfo.total - diskInfo.free);
+    serverInfo.diskAvailableRaw = diskInfo.available;
+    serverInfo.diskSizeRaw = diskInfo.total;
+    serverInfo.diskUseRaw = diskInfo.total - diskInfo.free;
+    serverInfo.diskUsagePercentage = Number(usagePercentage);
     return serverInfo;
   }
+
+  // PixelUnion: report storage against the configured server-wide quota when one is set,
+  // otherwise fall back to real disk usage. The synthetic DiskUsage is shaped so that
+  // getStorage's upstream arithmetic (total - free = used) yields quota usage unchanged.
+  // `free` is intentionally left unclamped: an over-quota tenant reports free < 0, which
+  // keeps `diskUse` and the percentage accurate rather than understating usage.
+  private async getDiskInfo(): Promise<DiskUsage> {
+    const { configFile } = this.configRepository.getEnv();
+    const { server } = await this.getConfig({ withCache: true });
+
+    if (configFile && server.uploadQuotaGb !== null) {
+      const total = server.uploadQuotaGb * HumanReadableSize.GiB;
+      const used = await this.userRepository.getQuotaUsage();
+      return { total, free: total - used, available: Math.max(total - used, 0) };
+    }
+
+    return this.storageRepository.checkDiskUsage(StorageCore.getBaseFolder(StorageFolder.Library));
+  }
+
 
   ping(): ServerPingResponse {
     return { res: 'pong' };
@@ -126,9 +130,8 @@ export class ServerService extends BaseService {
   }
 
   async getSystemConfig(): Promise<ServerConfigDto> {
-    const { setup } = this.configRepository.getEnv();
     const config = await this.getConfig({ withCache: false });
-    const isInitialized = !setup.allow || (await this.userRepository.hasAdmin());
+    const isInitialized = !(await this.isSetupAvailable());
     const onboarding = await this.systemMetadataRepository.get(SystemMetadataKey.AdminOnboarding);
 
     return {
@@ -136,6 +139,7 @@ export class ServerService extends BaseService {
       trashDays: config.trash.days,
       userDeleteDelay: config.user.deleteDelay,
       oauthButtonText: config.oauth.buttonText,
+      oauthAccountManagementUrl: config.oauth.accountManagementUrl,
       isInitialized,
       isOnboarded: onboarding?.isOnboarded || false,
       externalDomain: config.server.externalDomain,
@@ -205,8 +209,12 @@ export class ServerService extends BaseService {
       throw new BadRequestException('Invalid license key');
     }
     const { licensePublicKey } = this.configRepository.getEnv();
-    const licenseValid = this.cryptoRepository.verifySha256(dto.licenseKey, dto.activationKey, licensePublicKey.server);
-    if (!licenseValid) {
+    const isLicenseValid = this.cryptoRepository.verifySha256(
+      dto.licenseKey,
+      dto.activationKey,
+      licensePublicKey.server,
+    );
+    if (!isLicenseValid) {
       throw new BadRequestException('Invalid license key');
     }
 

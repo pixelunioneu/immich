@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { extname } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { AuthSharedLink } from 'src/database';
+import { Asset, AuthSharedLink } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -93,8 +92,7 @@ export class AssetMediaService extends BaseService {
   getUploadFilename({ auth, fieldName, file, body }: UploadRequest): string {
     requireUploadAccess(auth);
 
-    const extension = extname(body.filename || file.originalName);
-
+    const extension = getFilenameExtension(body.filename || file.originalName);
     const lookup = {
       [UploadFieldName.ASSET_DATA]: extension,
       [UploadFieldName.SIDECAR_DATA]: '.xmp',
@@ -131,6 +129,7 @@ export class AssetMediaService extends BaseService {
     file: UploadFile,
     sidecarFile?: UploadFile,
   ): Promise<AssetMediaResponseDto> {
+    let asset: Asset | undefined;
     try {
       await this.requireAccess({
         auth,
@@ -140,6 +139,7 @@ export class AssetMediaService extends BaseService {
       });
 
       await this.requireQuota(auth, file.size);
+      await this.requireDiskSpace();
 
       if (dto.livePhotoVideoId) {
         await onBeforeLink(
@@ -148,7 +148,7 @@ export class AssetMediaService extends BaseService {
         );
       }
 
-      const asset = await this.assetRepository.create({
+      asset = await this.assetRepository.create({
         ownerId: auth.user.id,
         libraryId: null,
 
@@ -216,6 +216,11 @@ export class AssetMediaService extends BaseService {
 
         this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicateId}`);
         return { status: AssetMediaStatus.DUPLICATE, id: duplicateId };
+      }
+
+      // clean up the asset row if one was created
+      if (asset) {
+        await this.assetRepository.remove({ id: asset.id });
       }
 
       this.logger.error(`Error uploading file ${error}`, error?.stack);
@@ -354,8 +359,22 @@ export class AssetMediaService extends BaseService {
     }
 
     await this.albumRepository.addAssetIds(album.id, [assetId]);
-    for (const { user } of album.albumUsers) {
-      await this.eventRepository.emit('AlbumUpdate', { id: album.id, recipientId: user.id });
+    const userIds = album.albumUsers.map(({ user }) => user.id);
+    await this.eventRepository.emit('AlbumUpdate', {
+      id: album.id,
+      userIds,
+      recipientIds: userIds,
+    });
+  }
+
+  // PixelUnion: block uploads (only uploads) when the underlying library volume is below
+  // the configured minimum free space. Derived-media jobs are deliberately not gated.
+  private async requireDiskSpace(): Promise<void> {
+    const libraryBase = StorageCore.getBaseFolder(StorageFolder.Library);
+    const diskInfo = await this.storageRepository.checkDiskUsage(libraryBase);
+    const minimumSpace = this.configRepository.getEnv().storage.minimumDiskSpaceBytes;
+    if (diskInfo.available < minimumSpace) {
+      throw new BadRequestException('Not enough storage');
     }
   }
 
