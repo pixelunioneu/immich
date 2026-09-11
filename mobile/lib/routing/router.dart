@@ -56,6 +56,7 @@ import 'package:immich_mobile/presentation/pages/locked_folder.page.dart';
 import 'package:immich_mobile/presentation/pages/map.page.dart';
 import 'package:immich_mobile/presentation/pages/memory.page.dart';
 import 'package:immich_mobile/presentation/pages/memory_list.page.dart';
+import 'package:immich_mobile/presentation/pages/onboarding/onboarding_welcome.page.dart';
 import 'package:immich_mobile/presentation/pages/partner_detail.page.dart';
 import 'package:immich_mobile/presentation/pages/people_collection.page.dart';
 import 'package:immich_mobile/presentation/pages/person.page.dart';
@@ -117,6 +118,7 @@ class AppRouter extends RootStackRouter {
   late final List<AutoRoute> routes = [
     AutoRoute(page: SplashScreenRoute.page, initial: true),
     AutoRoute(page: LoginRoute.page),
+    AutoRoute(page: OnboardingWelcomeRoute.page),
     AutoRoute(page: ChangePasswordRoute.page),
     AutoRoute(
       page: TabShellRoute.page,
