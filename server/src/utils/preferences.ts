@@ -54,6 +54,9 @@ const getDefaultPreferences = (): UserPreferences => {
     recentlyAdded: {
       sidebarWeb: false,
     },
+    telemetry: {
+      enabled: false,
+    },
   };
 };
 

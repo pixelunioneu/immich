@@ -25,6 +25,7 @@ declare module '$env/static/public' {
   export const PUBLIC_IMMICH_PAY_HOST: string;
   export const PUBLIC_IMMICH_BUY_HOST: string;
   export const PUBLIC_API_URL: string;
+  export const PUBLIC_SENTRY_DSN: string;
 }
 
 interface Element {

@@ -1,4 +1,5 @@
 import { isHttpError, type ApiHttpError } from '@immich/sdk';
+import { handleErrorWithSentry } from '@sentry/sveltekit';
 import type { HandleClientError } from '@sveltejs/kit';
 
 const DEFAULT_MESSAGE = 'Hmm, not sure about that. Check the logs or open a ticket?';
@@ -30,8 +31,12 @@ const parseError = (error: unknown, status: number, message: string) => {
   };
 };
 
-export const handleError: HandleClientError = ({ error, status, message }) => {
+const myHandleError: HandleClientError = ({ error, status, message }) => {
   const result = parseError(error, status, message);
   console.error(`[hooks.client.ts]:handleError ${result.message}`, error);
   return result;
 };
+
+// handleErrorWithSentry no-ops when Sentry hasn't been initialized (see sentry-manager.svelte.ts) —
+// safe regardless of the user's telemetry preference or pre-login state.
+export const handleError = handleErrorWithSentry(myHandleError);

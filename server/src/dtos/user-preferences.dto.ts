@@ -106,6 +106,13 @@ const RecentlyAddedUpdateSchema = z
   .optional()
   .meta({ id: 'RecentlyAddedUpdate' });
 
+const TelemetryUpdateSchema = z
+  .object({
+    enabled: z.boolean().optional().describe('Whether error tracking (Sentry) is enabled'),
+  })
+  .optional()
+  .meta({ id: 'TelemetryUpdate' });
+
 const UserPreferencesUpdateSchema = z
   .object({
     albums: AlbumsUpdateSchema,
@@ -121,6 +128,7 @@ const UserPreferencesUpdateSchema = z
     sharedLinks: SharedLinksUpdateSchema,
     tags: TagsUpdateSchema,
     recentlyAdded: RecentlyAddedUpdateSchema,
+    telemetry: TelemetryUpdateSchema,
   })
   .meta({ id: 'UserPreferencesUpdateDto' });
 
@@ -207,6 +215,12 @@ const RecentlyAddedResponseSchema = z
   })
   .meta({ id: 'RecentlyAddedResponse' });
 
+const TelemetryResponseSchema = z
+  .object({
+    enabled: z.boolean().describe('Whether error tracking (Sentry) is enabled'),
+  })
+  .meta({ id: 'TelemetryResponse' });
+
 const UserPreferencesResponseSchema = z
   .object({
     albums: AlbumsResponseSchema,
@@ -221,6 +235,7 @@ const UserPreferencesResponseSchema = z
     purchase: PurchaseResponseSchema,
     cast: CastResponseSchema,
     recentlyAdded: RecentlyAddedResponseSchema,
+    telemetry: TelemetryResponseSchema,
   })
   .meta({ id: 'UserPreferencesResponseDto' });
 

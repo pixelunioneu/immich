@@ -7,6 +7,8 @@ dotenv.config({ quiet: true });
 process.env.PUBLIC_IMMICH_BUY_HOST = process.env.PUBLIC_IMMICH_BUY_HOST || 'https://buy.immich.app';
 process.env.PUBLIC_IMMICH_PAY_HOST = process.env.PUBLIC_IMMICH_PAY_HOST || 'https://pay.futo.org';
 process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.prd.tech.pixelunion.eu';
+// PixelUnion: opt-in web Sentry error tracking. Unset (empty) disables the feature entirely.
+process.env.PUBLIC_SENTRY_DSN = process.env.PUBLIC_SENTRY_DSN || '';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {

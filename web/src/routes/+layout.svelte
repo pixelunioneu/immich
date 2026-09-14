@@ -10,6 +10,7 @@
   import VersionAnnouncement from './VersionAnnouncement.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
+  import '$lib/managers/sentry-manager.svelte'; // side-effect: subscribes to auth events
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
   import ServerRestartingModal from '$lib/modals/ServerRestartingModal.svelte';
   import { Route } from '$lib/route';

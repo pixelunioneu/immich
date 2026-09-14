@@ -48,4 +48,7 @@ export const preferencesFactory = Sync.makeFactory<UserPreferencesResponseDto>({
   recentlyAdded: {
     sidebarWeb: false,
   },
+  telemetry: {
+    enabled: false,
+  },
 });

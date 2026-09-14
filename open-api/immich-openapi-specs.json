@@ -31593,6 +31593,27 @@
         },
         "type": "object"
       },
+      "TelemetryResponse": {
+        "properties": {
+          "enabled": {
+            "description": "Whether error tracking (Sentry) is enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "TelemetryUpdate": {
+        "properties": {
+          "enabled": {
+            "description": "Whether error tracking (Sentry) is enabled",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "TemplateDto": {
         "properties": {
           "template": {
@@ -32775,6 +32796,9 @@
           },
           "tags": {
             "$ref": "#/components/schemas/TagsResponse"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/TelemetryResponse"
           }
         },
         "required": [
@@ -32789,7 +32813,8 @@
           "ratings",
           "recentlyAdded",
           "sharedLinks",
-          "tags"
+          "tags",
+          "telemetry"
         ],
         "type": "object"
       },
@@ -32833,6 +32858,9 @@
           },
           "tags": {
             "$ref": "#/components/schemas/TagsUpdate"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/TelemetryUpdate"
           }
         },
         "type": "object"

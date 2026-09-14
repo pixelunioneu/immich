@@ -717,6 +717,10 @@ export type TagsResponse = {
     /** Whether tags appear in web sidebar */
     sidebarWeb: boolean;
 };
+export type TelemetryResponse = {
+    /** Whether error tracking (Sentry) is enabled */
+    enabled: boolean;
+};
 export type UserPreferencesResponseDto = {
     albums: AlbumsResponse;
     cast: CastResponse;
@@ -730,6 +734,7 @@ export type UserPreferencesResponseDto = {
     recentlyAdded: RecentlyAddedResponse;
     sharedLinks: SharedLinksResponse;
     tags: TagsResponse;
+    telemetry: TelemetryResponse;
 };
 export type AlbumsUpdate = {
     defaultAssetOrder?: AssetOrder;
@@ -803,6 +808,10 @@ export type TagsUpdate = {
     /** Whether tags appear in web sidebar */
     sidebarWeb?: boolean;
 };
+export type TelemetryUpdate = {
+    /** Whether error tracking (Sentry) is enabled */
+    enabled?: boolean;
+};
 export type UserPreferencesUpdateDto = {
     albums?: AlbumsUpdate;
     avatar?: AvatarUpdate;
@@ -817,6 +826,7 @@ export type UserPreferencesUpdateDto = {
     recentlyAdded?: RecentlyAddedUpdate;
     sharedLinks?: SharedLinksUpdate;
     tags?: TagsUpdate;
+    telemetry?: TelemetryUpdate;
 };
 export type SessionResponseDto = {
     /** App version */

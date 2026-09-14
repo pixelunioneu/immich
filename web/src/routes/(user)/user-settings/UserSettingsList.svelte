@@ -3,10 +3,12 @@
   import DownloadSettings from './DownloadSettings.svelte';
   import FeatureSettings from './FeatureSettings.svelte';
   import NotificationsSettings from './NotificationsSettings.svelte';
+  import PrivacySettings from './PrivacySettings.svelte';
   import UserUsageStatistic from './UserUsageStatistic.svelte';
   import { OpenQueryParam } from '$lib/constants';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { type ApiKeyResponseDto, type SessionResponseDto } from '@immich/sdk';
+  import { PUBLIC_SENTRY_DSN } from '$env/static/public';
   import {
     mdiAccountGroupOutline,
     mdiAccountOutline,
@@ -21,6 +23,7 @@
     mdiLockSmart,
     mdiServerOutline,
     mdiShieldAccountOutline,
+    mdiShieldLockOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
@@ -117,6 +120,12 @@
 >
   <NotificationsSettings />
 </SettingAccordion>
+
+{#if PUBLIC_SENTRY_DSN}
+  <SettingAccordion icon={mdiShieldLockOutline} key="privacy" title={$t('privacy')} subtitle={$t('privacy_setting_description')}>
+    <PrivacySettings />
+  </SettingAccordion>
+{/if}
 
 {#if featureFlagsManager.value.passwordLogin}
   <SettingAccordion

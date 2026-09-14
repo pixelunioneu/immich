@@ -598,6 +598,9 @@ export type UserPreferences = {
   recentlyAdded: {
     sidebarWeb: boolean;
   };
+  telemetry: {
+    enabled: boolean;
+  };
 };
 
 export type UserMetadataItem<T extends keyof UserMetadata = UserMetadataKey> = {
