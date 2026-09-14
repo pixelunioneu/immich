@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "lib": ["dom", "esnext"],
+    // Deliberately mirrors server/tsconfig.json for the shared subset: this package
+    // typechecks server sources it reuses, so a schema change that breaks the front
+    // door has to fail the build here the same way it would there.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "paths": {
+      // Server sources import each other as `src/...`, so this alias has to point at
+      // the server package for those imports to resolve. Frontdoor's own modules use
+      // relative imports and never go through it.
+      "src/*": ["../../server/src/*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2024"
+  },
+  "exclude": ["dist", "node_modules", "vite.config.ts"],
+  "include": ["src/**/*", "test/**/*"]
+}

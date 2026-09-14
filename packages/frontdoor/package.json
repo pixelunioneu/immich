@@ -1,0 +1,34 @@
+{
+  "name": "@immich/frontdoor",
+  "version": "3.2.1",
+  "description": "Serves the cheap, high-volume Immich API paths from shared infrastructure so idle instances do not have to be running",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pixelunioneu/immich.git",
+    "directory": "packages/frontdoor"
+  },
+  "type": "module",
+  "private": true,
+  "license": "GNU Affero General Public License version 3",
+  "scripts": {
+    "codegen": "vite build --config vite.codegen.config.ts && node dist-codegen/generate-contract.cjs",
+    "build": "vite build",
+    "check": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "kysely": "0.28.17",
+    "pg": "^8.11.3",
+    "ua-parser-js": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0"
+  }
+}
