@@ -7,8 +7,10 @@ dotenv.config({ quiet: true });
 process.env.PUBLIC_IMMICH_BUY_HOST = process.env.PUBLIC_IMMICH_BUY_HOST || 'https://buy.immich.app';
 process.env.PUBLIC_IMMICH_PAY_HOST = process.env.PUBLIC_IMMICH_PAY_HOST || 'https://pay.futo.org';
 process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.prd.tech.pixelunion.eu';
-// PixelUnion: opt-in web Sentry error tracking. Unset (empty) disables the feature entirely.
-process.env.PUBLIC_SENTRY_DSN = process.env.PUBLIC_SENTRY_DSN || '';
+// PixelUnion: opt-in web Sentry error tracking. Empty disables the feature entirely.
+process.env.PUBLIC_SENTRY_DSN =
+  process.env.PUBLIC_SENTRY_DSN ||
+  'https://338bbbbc6cdcf73b2bef12b5b266561c@o4512085268955136.ingest.de.sentry.io/4512085526577232';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
