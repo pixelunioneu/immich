@@ -7,6 +7,7 @@ At PixelUnion, we value openness and open source. This document serves as a reco
 - [X] Replaced Immich trademark logos
 - [X] Added billing link to user drop down menu
 - [X] Added simple password reset page that uses PixelUnion api
+- [X] Added Sentry error tracking to the server component (opt-in via `SENTRY_DSN` env var)
 
 # Updating fork
 
