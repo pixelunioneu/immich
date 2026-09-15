@@ -10,6 +10,10 @@
  *
  * The output is committed. CI regenerates it and fails on a diff, so an upstream
  * change to either list is caught at build time rather than in production.
+ *
+ * The mise `codegen` task runs prettier over the result: the repo sorts JSON keys
+ * with prettier-plugin-sort-json, and without that step the drift check would
+ * fail on formatting alone.
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

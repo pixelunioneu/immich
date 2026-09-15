@@ -1,0 +1,60 @@
+name: Frontdoor
+
+on:
+  push:
+    branches: [main, 'release/*']
+    paths:
+      - 'packages/frontdoor/**'
+      # The package bundles server sources and generates its API contract from
+      # them, so a server change can change the front door.
+      - 'server/src/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/frontdoor.yml'
+  pull_request:
+    paths:
+      - 'packages/frontdoor/**'
+      - 'server/src/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/frontdoor.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  unit:
+    name: Frontdoor Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ./packages/frontdoor
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Runs format, typecheck (including the reused server sources), the
+      # generated-contract drift check, and the unit tests.
+      - name: Run checks
+        run: mise run ci-unit
+
+  success-check:
+    name: Frontdoor Checks Success
+    needs: [unit]
+    permissions: {}
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: immich-app/devtools/actions/success-check@6b81b1572e466f7f48ba3c823159ce3f4a4d66a6 # success-check-action-0.0.3
+        with:
+          needs: ${{ toJSON(needs) }}

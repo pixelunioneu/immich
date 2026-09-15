@@ -5,17 +5,16 @@ import {
 } from 'node:http';
 import { authenticate, type Auth } from './auth.js';
 import { loadConfig, type Config } from './config.js';
-import { TenantDatabaseUnavailable, TenantPools } from './db.js';
-import { buildServerInfo, type ServerInfo } from './handlers/server-info.js';
+import { TenantPools } from './db.js';
 import {
-  deleteAcks,
-  getAcks,
-  InvalidAckType,
-  setAcks,
-} from './handlers/sync-ack.js';
+  BadRequest,
+  FrontdoorError,
+  TenantDatabaseUnavailable,
+} from './errors.js';
+import { buildServerInfo, type ServerInfo } from './handlers/server-info.js';
+import { deleteAcks, getAcks, setAcks } from './handlers/sync-ack.js';
 import {
   asStringArray,
-  BadRequest,
   readJsonBody,
   sendEmpty,
   sendError,
@@ -216,19 +215,23 @@ const onError = (res: ServerResponse, error: unknown) => {
     return res.end();
   }
 
-  if (error instanceof BadRequest) {
-    metrics.increment('frontdoor_errors_total', { reason: 'bad_request' });
-    return sendError(res, 400, error.message, 'Bad Request');
-  }
-
-  if (error instanceof InvalidAckType) {
-    metrics.increment('frontdoor_errors_total', { reason: 'invalid_ack_type' });
-    return sendError(res, 400, error.message, 'Bad Request');
-  }
-
-  if (error instanceof TenantDatabaseUnavailable) {
+  if (error instanceof FrontdoorError) {
     metrics.increment('frontdoor_errors_total', { reason: error.reason });
-    return sendError(res, 503, 'Service Unavailable', 'Service Unavailable');
+
+    if (error instanceof TenantDatabaseUnavailable) {
+      // One line, not a stack: during a database outage every request in the
+      // fleet lands here, and a stack trace each would drown the logs.
+      console.warn(`Tenant database unavailable (${error.reason})`);
+      res.setHeader('retry-after', '5');
+      return sendError(
+        res,
+        error.status,
+        'Service Unavailable',
+        'Service Unavailable',
+      );
+    }
+
+    return sendError(res, error.status, error.message, 'Bad Request');
   }
 
   metrics.increment('frontdoor_errors_total', { reason: 'unhandled' });

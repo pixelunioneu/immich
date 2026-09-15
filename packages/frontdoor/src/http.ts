@@ -1,8 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { BadRequest } from './errors.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
-
-export class BadRequest extends Error {}
 
 export const sendJson = (
   res: ServerResponse,

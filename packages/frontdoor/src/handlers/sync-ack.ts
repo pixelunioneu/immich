@@ -1,5 +1,6 @@
 import type { Kysely } from 'kysely';
 import type { DB } from 'src/schema';
+import { InvalidAckType } from '../errors.js';
 import contract from '../generated/contract.json' with { type: 'json' };
 
 /**
@@ -23,12 +24,6 @@ if (!SYNC_ENTITY_TYPES.has(SYNC_RESET)) {
 
 /** Mirrors `fromAck`: `type|updateId|extraId`, split on the first two separators. */
 export const ackType = (ack: string): string => ack.split('|', 3)[0] ?? '';
-
-export class InvalidAckType extends Error {
-  constructor(readonly type: string) {
-    super(`Invalid ack type: ${type}`);
-  }
-}
 
 export const getAcks = (db: Kysely<DB>, sessionId: string) =>
   db

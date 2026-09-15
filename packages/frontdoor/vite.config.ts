@@ -15,9 +15,11 @@ export default defineConfig({
     },
   },
   ssr: {
-    // Bundle everything except Node built-ins and the native driver.
-    noExternal: /^(?!node:|pg$).*$/,
-    external: ['pg'],
+    // Bundle everything except Node built-ins, so the runtime image needs no
+    // node_modules at all. pg-native is left out: pg only reaches for it when
+    // explicitly asked, and we never ask.
+    noExternal: /^(?!node:).*$/,
+    external: ['pg-native'],
   },
   test: {
     name: 'frontdoor:unit',

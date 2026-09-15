@@ -1,0 +1,55 @@
+[tasks.install]
+run = "pnpm install --filter @immich/frontdoor --frozen-lockfile"
+
+[tasks.codegen]
+env._.path = "./node_modules/.bin"
+run = [
+  "vite build --config vite.codegen.config.ts",
+  "node dist-codegen/generate-contract.cjs",
+  # The repo sorts JSON keys via prettier-plugin-sort-json, so the generated file
+  # has to go through prettier too. Without this the drift check below fails on
+  # formatting alone, every run.
+  "prettier --write src/generated/contract.json",
+]
+
+[tasks.build]
+env._.path = "./node_modules/.bin"
+run = "vite build"
+
+[tasks.test]
+env._.path = "./node_modules/.bin"
+run = "vitest"
+
+[tasks.check]
+env._.path = "./node_modules/.bin"
+run = "tsc --noEmit"
+
+[tasks.format]
+env._.path = "./node_modules/.bin"
+run = "prettier --check ."
+
+[tasks."format-fix"]
+env._.path = "./node_modules/.bin"
+run = "prettier --write ."
+
+# Regenerates the API contract from the server sources and fails if the result
+# differs from what is committed. This is the drift detector: an upstream change
+# to the supported media types or the sync entity types has to surface here
+# rather than in production.
+[tasks."check-contract"]
+run = [
+  { task = ":codegen" },
+  "git diff --exit-code src/generated/contract.json",
+]
+
+[tasks.ci-unit]
+run = [
+  { task = ":install" },
+  { task = ":format" },
+  { task = ":check" },
+  { task = ":check-contract" },
+  { task = ":test --run" },
+]
+
+[tasks.checklist]
+run = [{ task = ":ci-unit" }]

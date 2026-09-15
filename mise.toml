@@ -5,6 +5,7 @@ config_roots = [
   "packages/plugin-core",
   "server",
   "packages/cli",
+  "packages/frontdoor",
   "deployment",
   "mobile",
   "e2e",

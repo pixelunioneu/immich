@@ -1,7 +1,8 @@
 import type { Kysely } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { DB } from 'src/schema';
-import { ackType, InvalidAckType, setAcks } from '../src/handlers/sync-ack.js';
+import { InvalidAckType } from '../src/errors.js';
+import { ackType, setAcks } from '../src/handlers/sync-ack.js';
 
 type Recorded = { inserted: Array<Record<string, unknown>>; resets: number };
 

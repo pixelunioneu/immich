@@ -2,6 +2,7 @@ import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import type { DB } from 'src/schema';
 import type { Config } from './config.js';
+import { FrontdoorError, TenantDatabaseUnavailable } from './errors.js';
 import { metrics } from './metrics.js';
 import { databaseForTenant } from './tenant.js';
 
@@ -16,12 +17,6 @@ type Entry = {
   db: Kysely<DB>;
   lastUsed: number;
 };
-
-export class TenantDatabaseUnavailable extends Error {
-  constructor(readonly reason: string) {
-    super(`Tenant database unavailable: ${reason}`);
-  }
-}
 
 export class TenantPools {
   private entries = new Map<string, Entry>();
@@ -72,7 +67,13 @@ export class TenantPools {
       return result;
     } catch (error) {
       this.recordFailure(tenant);
-      throw error;
+      // Anything that is not a deliberate error is the database failing, not a
+      // bug here. Reclassify it so the caller answers 503 and logs one line,
+      // rather than 500 with a stack trace on every request of an outage.
+      if (error instanceof FrontdoorError) {
+        throw error;
+      }
+      throw new TenantDatabaseUnavailable(driverReason(error));
     } finally {
       const seconds = Number(process.hrtime.bigint() - started) / 1e9;
       metrics.observe('frontdoor_db_latency_seconds', seconds, { endpoint });
@@ -187,3 +188,9 @@ export class TenantPools {
     metrics.setGauge('frontdoor_breakers_open', open);
   }
 }
+
+/** A short, stable label for a driver failure, suitable for a metric label. */
+const driverReason = (error: unknown): string => {
+  const code = (error as { code?: unknown })?.code;
+  return typeof code === 'string' ? code.toLowerCase() : 'query_failed';
+};
