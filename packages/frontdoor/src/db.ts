@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, sql } from 'kysely';
 import pg from 'pg';
 import type { DB } from 'src/schema';
 import type { Config } from './config.js';
@@ -16,6 +16,8 @@ type Entry = {
   pool: pg.Pool;
   db: Kysely<DB>;
   lastUsed: number;
+  /** Resolves once the connection has been confirmed to be the right database. */
+  verified: Promise<void>;
 };
 
 export class TenantPools {
@@ -62,6 +64,7 @@ export class TenantPools {
     const started = process.hrtime.bigint();
 
     try {
+      await entry.verified;
       const result = await work(entry.db);
       this.failures.delete(tenant);
       return result;
@@ -99,8 +102,14 @@ export class TenantPools {
 
     const database = databaseForTenant(tenant, this.config.databasePrefix);
     const pool = new pg.Pool({
-      connectionString: this.config.databaseUrl,
-      database,
+      // The database MUST be carried in the connection string, not passed
+      // alongside it. `pg` resolves the two with
+      // `Object.assign({}, config, parse(config.connectionString))`, so anything
+      // parsed out of the string overrides the explicit option - including the
+      // `database: null` it emits for a URL with no path. Passing both silently
+      // sends every tenant to the same database while leaving the tenant
+      // validation looking correct.
+      connectionString: connectionStringFor(this.config.databaseUrl, database),
       min: 0,
       max: this.config.pool.maxPerPool,
       idleTimeoutMillis: this.config.pool.idleMs,
@@ -113,10 +122,16 @@ export class TenantPools {
     // A pool-level error must never take the process down: the tenant fails, not the fleet.
     pool.on('error', () => this.recordFailure(tenant));
 
+    const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
+
     const entry: Entry = {
       pool,
-      db: new Kysely<DB>({ dialect: new PostgresDialect({ pool }) }),
+      db,
       lastUsed: Date.now(),
+      // Checked once per pool, before the pool is used for anything. Makes the
+      // tenant-to-database mapping load-bearing at runtime rather than trusting
+      // that the connection options were assembled correctly.
+      verified: guardUnawaited(verifyDatabase(db, database)),
     };
 
     this.entries.set(tenant, entry);
@@ -193,4 +208,48 @@ export class TenantPools {
 const driverReason = (error: unknown): string => {
   const code = (error as { code?: unknown })?.code;
   return typeof code === 'string' ? code.toLowerCase() : 'query_failed';
+};
+
+/**
+ * Puts the database in the connection string's path.
+ *
+ * Exported so it can be tested directly: getting this wrong does not fail, it
+ * quietly serves every tenant from one database.
+ */
+export const connectionStringFor = (
+  baseUrl: string,
+  database: string,
+): string => {
+  const url = new URL(baseUrl);
+  url.pathname = `/${encodeURIComponent(database)}`;
+  return url.toString();
+};
+
+/**
+ * Asks the server which database it actually opened and refuses to proceed if it
+ * is not the one intended. A mismatch here would be a cross-tenant read, so it
+ * fails closed.
+ */
+const verifyDatabase = async (
+  db: Kysely<DB>,
+  expected: string,
+): Promise<void> => {
+  const row = await sql<{
+    current: string;
+  }>`select current_database() as current`.execute(db);
+  const actual = row.rows[0]?.current;
+  if (actual !== expected) {
+    throw new TenantDatabaseUnavailable('database mismatch');
+  }
+};
+
+/**
+ * A pool can be created and then evicted before any request uses it, which would
+ * leave the verification promise rejected and unobserved - an unhandled rejection
+ * takes the process down. Attaching a no-op handler marks it observed without
+ * changing what `await` on it does.
+ */
+const guardUnawaited = <T>(promise: Promise<T>): Promise<T> => {
+  promise.catch(() => undefined);
+  return promise;
 };
