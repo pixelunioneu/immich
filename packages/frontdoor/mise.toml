@@ -70,9 +70,15 @@ run = [
   { task = ":test-medium" },
 ]
 
+# `check` and `codegen` both pull in the server sources this package reuses
+# (tsconfig maps `src/*` and `test/*` at ../../server), so the server's own
+# dependencies and the built plugin SDK have to be present or tsc reports every
+# one of its imports as a missing module.
 [tasks.ci-unit]
 run = [
+  { task = "//server:install" },
   { task = ":install" },
+  { task = "//:plugins" },
   { task = ":format" },
   { task = ":check" },
   { task = ":check-contract" },
