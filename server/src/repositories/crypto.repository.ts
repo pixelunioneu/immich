@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createCipheriv, createDecipheriv, createHash, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createPublicKey,
+  createVerify,
+  randomBytes,
+  randomUUID,
+} from 'node:crypto';
 import { createReadStream } from 'node:fs';
 
 @Injectable()

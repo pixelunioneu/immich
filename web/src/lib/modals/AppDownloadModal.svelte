@@ -11,7 +11,6 @@
   <div class="mx-auto flex max-w-50 flex-col gap-4">
     <a href="https://play.google.com/store/apps/details?id=app.pixelunion.immich" target="_blank" id="play-store-link">
       <img class="mt-2 w-full" alt="Get it on Google Play" src={playStoreBadge} />
-
     </a>
 
     <a href={Constants.Get.iOS} target="_blank" id="app-store-link">

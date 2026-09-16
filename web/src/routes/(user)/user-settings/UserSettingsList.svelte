@@ -44,7 +44,12 @@
   let { keys = $bindable([]), sessions = $bindable([]) }: Props = $props();
 </script>
 
-<SettingAccordion icon={mdiCogOutline} key="app-settings" title={$t('app_settings')} subtitle={$t('manage_the_app_settings')}>
+<SettingAccordion
+  icon={mdiCogOutline}
+  key="app-settings"
+  title={$t('app_settings')}
+  subtitle={$t('manage_the_app_settings')}
+>
   <AppSettings />
 </SettingAccordion>
 
@@ -122,7 +127,12 @@
 </SettingAccordion>
 
 {#if PUBLIC_SENTRY_DSN}
-  <SettingAccordion icon={mdiShieldLockOutline} key="privacy" title={$t('privacy')} subtitle={$t('privacy_setting_description')}>
+  <SettingAccordion
+    icon={mdiShieldLockOutline}
+    key="privacy"
+    title={$t('privacy')}
+    subtitle={$t('privacy_setting_description')}
+  >
     <PrivacySettings />
   </SettingAccordion>
 {/if}

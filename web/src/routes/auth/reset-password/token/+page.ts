@@ -10,14 +10,11 @@ export const load = (async ({ url, fetch }) => {
 
   if (token && timestamp) {
     try {
-      const res = await fetch(
-        PUBLIC_API_URL + '/api/auth/password-reset/validate-token',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, timestamp }),
-        }
-      );
+      const res = await fetch(PUBLIC_API_URL + '/api/auth/password-reset/validate-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, timestamp }),
+      });
       isValid = res.status === 200;
     } catch (e) {
       isValid = false;

@@ -22,16 +22,12 @@ export const WelcomeEmail = ({ baseUrl, displayName, username, customTemplate }:
 
       <Text>You have been invited to join a PixelUnion.</Text>
 
-      <Text>
-        Visit the link below to create your account and start uploading your photos and videos.
-      </Text>
+      <Text>Visit the link below to create your account and start uploading your photos and videos.</Text>
     </>
   );
 
   return (
-    <ImmichLayout
-      preview={customTemplate ? emailContent.toString() : 'You have been invited to join a PixelUnion.'}
-    >
+    <ImmichLayout preview={customTemplate ? emailContent.toString() : 'You have been invited to join a PixelUnion.'}>
       {customTemplate && (
         <Text className="m-0">
           <div dangerouslySetInnerHTML={{ __html: emailContent }}></div>

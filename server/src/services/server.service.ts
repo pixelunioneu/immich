@@ -99,7 +99,6 @@ export class ServerService extends BaseService {
     return this.storageRepository.checkDiskUsage(StorageCore.getBaseFolder(StorageFolder.Library));
   }
 
-
   ping(): ServerPingResponse {
     return { res: 'pong' };
   }

@@ -69,9 +69,7 @@
   });
 
   const shouldPoll = $derived(migration?.status === PENDING || migration?.status === RUNNING);
-  const canStart = $derived(
-    !!migration && migration.status === CONCEPT && (migration.uploads?.length ?? 0) > 0,
-  );
+  const canStart = $derived(!!migration && migration.status === CONCEPT && (migration.uploads?.length ?? 0) > 0);
   const canCancel = $derived(!!migration && (migration.status === PENDING || migration.status === RUNNING));
 
   const formatBytes = (bytes: number | null | undefined): string => {
@@ -374,7 +372,9 @@
           <div class="rounded-2xl border border-gray-200 dark:border-subtle p-4 bg-subtle">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p class="font-mono text-lg">{migration.username}<span class="text-immich-fg/50">{tenantDomainSuffix}</span></p>
+                <p class="font-mono text-lg">
+                  {migration.username}<span class="text-immich-fg/50">{tenantDomainSuffix}</span>
+                </p>
                 <p class="text-sm text-immich-fg/60">{$t('status')}: {migration.status}</p>
               </div>
               <a
@@ -391,7 +391,9 @@
           {#if migration.uploads?.length}
             <ul class="space-y-2">
               {#each migration.uploads as upload (upload.id)}
-                <li class="flex items-center justify-between rounded-xl border border-gray-200 dark:border-subtle px-4 py-3">
+                <li
+                  class="flex items-center justify-between rounded-xl border border-gray-200 dark:border-subtle px-4 py-3"
+                >
                   <div>
                     <p class="font-mono text-sm">{upload.filename}</p>
                     <p class="text-xs text-immich-fg/60">{formatBytes(upload.filesize)}</p>
@@ -407,7 +409,7 @@
           <GooglePhotosMigrationUpload
             filenamePattern={config?.upload_filename_pattern ?? 'takeout-*.zip'}
             maxBytes={config?.upload_max_bytes ?? 12 * 1024 ** 3}
-            existingUploadKeys={existingUploadKeys}
+            {existingUploadKeys}
             onUploadComplete={loadMigration}
             onReauthRequired={handleReauthRequired}
           />
@@ -431,7 +433,12 @@
             </div>
           {:else}
             <div class="flex flex-wrap gap-2">
-              <Button shape="round" size="small" disabled={!canStart || startInProgress} onclick={() => handleStart(false)}>
+              <Button
+                shape="round"
+                size="small"
+                disabled={!canStart || startInProgress}
+                onclick={() => handleStart(false)}
+              >
                 {$t('google_photos_migration_start')}
               </Button>
               <Button shape="round" size="small" color="secondary" onclick={() => handleDeleteMigration()}>
@@ -501,10 +508,7 @@
               </Button>
             </div>
           {:else if migration.status === FAILED}
-            <section
-              class="rounded-2xl border border-gray-200 dark:border-subtle p-6 bg-subtle"
-              aria-live="polite"
-            >
+            <section class="rounded-2xl border border-gray-200 dark:border-subtle p-6 bg-subtle" aria-live="polite">
               <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
                 <Icon icon={mdiAlertCircle} size="56" class="shrink-0 text-danger" aria-hidden="true" />
                 <div class="flex flex-1 flex-col gap-1 text-center sm:text-left">

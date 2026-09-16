@@ -49,7 +49,10 @@ describe(SearchRepository.name, () => {
     } as unknown as PuApiRepository;
     const sut = new SearchRepository(db, configRepository, puApiRepository, logger as never);
     const fallbackSpy = vitest
-      .spyOn(sut as never as { searchPlacesViaDatabase: (placeName: string) => Promise<unknown> }, 'searchPlacesViaDatabase')
+      .spyOn(
+        sut as never as { searchPlacesViaDatabase: (placeName: string) => Promise<unknown> },
+        'searchPlacesViaDatabase',
+      )
       .mockResolvedValue([]);
 
     const result = await sut.searchPlaces('amst');

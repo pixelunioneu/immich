@@ -7,7 +7,13 @@ import { DB } from 'src/schema';
 import { vitest } from 'vitest';
 
 describe(MapRepository.name, () => {
-  const logger = { setContext: vitest.fn(), debug: vitest.fn(), log: vitest.fn(), verboseFn: vitest.fn(), error: vitest.fn() };
+  const logger = {
+    setContext: vitest.fn(),
+    debug: vitest.fn(),
+    log: vitest.fn(),
+    verboseFn: vitest.fn(),
+    error: vitest.fn(),
+  };
   const metadataRepository = {} as SystemMetadataRepository;
   const db = {} as Kysely<DB>;
 
@@ -35,7 +41,12 @@ describe(MapRepository.name, () => {
     } as unknown as PuApiRepository;
     const sut = new MapRepository(configRepository, metadataRepository, puApiRepository, logger as never, db as never);
     const fallbackSpy = vitest
-      .spyOn(sut as never as { reverseGeocodeViaDatabase: (point: { latitude: number; longitude: number }) => Promise<unknown> }, 'reverseGeocodeViaDatabase')
+      .spyOn(
+        sut as never as {
+          reverseGeocodeViaDatabase: (point: { latitude: number; longitude: number }) => Promise<unknown>;
+        },
+        'reverseGeocodeViaDatabase',
+      )
       .mockResolvedValue({ country: null, state: null, city: null });
 
     const result = await sut.reverseGeocode({ latitude: 3, longitude: 4 });

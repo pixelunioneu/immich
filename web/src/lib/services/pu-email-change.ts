@@ -66,7 +66,12 @@ function parseErrorMessage(body: ApiErrorBody, status: number): string {
   }
 
   if (Array.isArray(body.detail) && body.detail.length > 0) {
-    return body.detail.map((item) => item.msg).filter(Boolean).join(', ') || 'Request failed';
+    return (
+      body.detail
+        .map((item) => item.msg)
+        .filter(Boolean)
+        .join(', ') || 'Request failed'
+    );
   }
 
   if (body.message) {

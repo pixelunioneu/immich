@@ -32,20 +32,17 @@
     error429 = false;
     errorReset = false;
     try {
-      const response = await fetch(
-        PUBLIC_API_URL + '/api/auth/password-reset',
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            token: data.token,
-            timestamp: data.timestamp,
-            password: password
-          }),
-        }
-      );
+      const response = await fetch(PUBLIC_API_URL + '/api/auth/password-reset', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: data.token,
+          timestamp: data.timestamp,
+          password: password,
+        }),
+      });
       if (response.status === 429) {
         error429 = true;
         submitting = false;

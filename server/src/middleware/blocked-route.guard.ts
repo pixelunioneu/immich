@@ -30,9 +30,7 @@ export const BLOCKED_ROUTE_PREFIXES = [
 export class BlockedRouteGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const { path } = context.switchToHttp().getRequest<Request>();
-    const isBlocked = BLOCKED_ROUTE_PREFIXES.some(
-      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-    );
+    const isBlocked = BLOCKED_ROUTE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
     if (isBlocked) {
       throw new NotFoundException();
     }

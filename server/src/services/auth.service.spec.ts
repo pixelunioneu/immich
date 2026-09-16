@@ -15,8 +15,8 @@ import { sharedLinkStub } from 'test/fixtures/shared-link.stub';
 import { systemConfigStub } from 'test/fixtures/system-config.stub';
 import { userStub } from 'test/fixtures/user.stub';
 import { newUuid } from 'test/small.factory';
-import { vitest } from 'vitest';
 import { newTestService, ServiceMocks } from 'test/utils';
+import { vitest } from 'vitest';
 
 const email = 'test@immich.com';
 const loginDetails = {

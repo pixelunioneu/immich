@@ -47,13 +47,17 @@ function createMigrationUploadStore() {
 
   const reset = () => items.set([]);
 
-  const remainingUploads = derived(items, (values) =>
-    values.filter((item) => item.state === MigrationUploadState.PENDING || item.state === MigrationUploadState.UPLOADING)
-      .length,
+  const remainingUploads = derived(
+    items,
+    (values) =>
+      values.filter(
+        (item) => item.state === MigrationUploadState.PENDING || item.state === MigrationUploadState.UPLOADING,
+      ).length,
   );
 
-  const completedUploads = derived(items, (values) =>
-    values.filter((item) => item.state === MigrationUploadState.DONE).length,
+  const completedUploads = derived(
+    items,
+    (values) => values.filter((item) => item.state === MigrationUploadState.DONE).length,
   );
 
   return {

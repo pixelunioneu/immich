@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/sveltekit';
 import type { UserAdminResponseDto } from '@immich/sdk';
+import * as Sentry from '@sentry/sveltekit';
 import { PUBLIC_SENTRY_DSN } from '$env/static/public';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';

@@ -25,7 +25,7 @@ export const load = (async ({ parent, url }) => {
   const $t = await getFormatter();
   return {
     meta: {
-      title: "PixelUnion",
+      title: 'PixelUnion',
     },
     continueUrl,
     publicConfig,

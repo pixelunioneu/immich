@@ -159,12 +159,7 @@
         </p>
 
         <Field label="New email address" required>
-          <Input
-            type="email"
-            bind:value={newEmail}
-            autocomplete="email"
-            disabled={flowState === 'requesting'}
-          />
+          <Input type="email" bind:value={newEmail} autocomplete="email" disabled={flowState === 'requesting'} />
         </Field>
 
         <div class="flex justify-end">

@@ -354,7 +354,7 @@ export const getMocks = () => {
     person: automock(PersonRepository, { strict: false }),
     plugin: automock(PluginRepository, { strict: true, args: [databaseMock, loggerMock] }),
     process: automock(ProcessRepository),
-    // eslint-disable-next-line no-sparse-arrays
+
     search: automock(SearchRepository, { args: [undefined, configMock, undefined, loggerMock], strict: false }),
     // eslint-disable-next-line no-sparse-arrays
     serverInfo: automock(ServerInfoRepository, { args: [, loggerMock], strict: false }),

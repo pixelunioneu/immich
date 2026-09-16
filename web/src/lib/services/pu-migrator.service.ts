@@ -58,9 +58,7 @@ export interface MigrationStorageResponse {
   totalUploadBytes: number;
 }
 
-export type StartMigrationResult =
-  | { status: 'started' }
-  | { status: 'insufficient_storage'; detail: string };
+export type StartMigrationResult = { status: 'started' } | { status: 'insufficient_storage'; detail: string };
 
 function getPuMigratorBaseUrl(): string {
   const hostname = globalThis.location?.hostname ?? '';
@@ -98,10 +96,7 @@ async function requireOidcAccessToken(): Promise<string> {
   return token;
 }
 
-async function fetchWithAuth(
-  url: string,
-  init: RequestInit & { skipRetry?: boolean } = {},
-): Promise<Response> {
+async function fetchWithAuth(url: string, init: RequestInit & { skipRetry?: boolean } = {}): Promise<Response> {
   const { skipRetry, ...rest } = init;
   const token = await requireOidcAccessToken();
   const headers = new Headers(rest.headers);

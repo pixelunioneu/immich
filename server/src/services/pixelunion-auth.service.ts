@@ -7,9 +7,7 @@ import { PixelUnionSessionTokenRepository } from 'src/repositories/pixelunion-se
 import { SystemMetadataRepository } from 'src/repositories/system-metadata.repository';
 import { getConfig } from 'src/utils/config';
 
-export type OidcTokenResult =
-  | { accessToken: string; reauth?: never }
-  | { reauth: true; accessToken?: never };
+export type OidcTokenResult = { accessToken: string; reauth?: never } | { reauth: true; accessToken?: never };
 
 type OidcTokenAuditEvent =
   | 'oidc_token_store'
@@ -47,7 +45,12 @@ export class PixelUnionAuthService {
     return this.cryptoRepository.decryptAesGcm(encrypted, this.getEncryptionKey());
   }
 
-  private audit(event: OidcTokenAuditEvent, userId: string, sessionId: string, details?: Record<string, unknown>): void {
+  private audit(
+    event: OidcTokenAuditEvent,
+    userId: string,
+    sessionId: string,
+    details?: Record<string, unknown>,
+  ): void {
     this.logger.log(event, { userId, sessionId, ...details });
   }
 

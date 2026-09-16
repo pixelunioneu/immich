@@ -128,7 +128,10 @@
           </div>
           {#if item.state === MigrationUploadState.UPLOADING}
             <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-              <div class="h-full rounded-full bg-primary transition-[width]" style={`width: ${item.progress * 100}%`}></div>
+              <div
+                class="h-full rounded-full bg-primary transition-[width]"
+                style={`width: ${item.progress * 100}%`}
+              ></div>
             </div>
           {/if}
           {#if item.error}
