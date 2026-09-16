@@ -3,8 +3,14 @@ import { defineConfig, UserConfig } from 'vite';
 
 export default defineConfig({
   resolve: {
-    // `src/*` resolves into the server package: see the note in tsconfig.json.
-    alias: { src: fileURLToPath(new URL('../../server/src', import.meta.url)) },
+    alias: {
+      // `src/*` resolves into the server package: see the note in tsconfig.json.
+      src: fileURLToPath(new URL('../../server/src', import.meta.url)),
+      // The server sources pulled in above resolve their own imports against
+      // server/node_modules, which the Docker build never installs. Every runtime
+      // dependency they reach for is declared by this package, so point them here.
+      'ua-parser-js': fileURLToPath(import.meta.resolve('ua-parser-js')),
+    },
   },
   build: {
     ssr: 'src/index.ts',
