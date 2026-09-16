@@ -15,16 +15,6 @@ export class BadRequest extends FrontdoorError {
   readonly reason = 'bad_request';
 }
 
-/** An ack naming a sync entity type the server does not know. */
-export class InvalidAckType extends FrontdoorError {
-  readonly status = 400;
-  readonly reason = 'invalid_ack_type';
-
-  constructor(readonly type: string) {
-    super(`Invalid ack type: ${type}`);
-  }
-}
-
 /**
  * The tenant's database could not be reached, or is failing fast behind the
  * circuit breaker. This is a 503 rather than a 500 on purpose: the service is

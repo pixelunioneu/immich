@@ -24,6 +24,23 @@ const number = (name: string, fallback: number): number => {
   return value;
 };
 
+const oneOf = <T extends string>(
+  name: string,
+  allowed: readonly T[],
+  fallback: T,
+): T => {
+  const raw = process.env[name];
+  if (raw === undefined) {
+    return fallback;
+  }
+  if (!allowed.includes(raw as T)) {
+    throw new Error(
+      `${name} must be one of ${allowed.join(', ')}, got: ${raw}`,
+    );
+  }
+  return raw as T;
+};
+
 export type Config = ReturnType<typeof loadConfig>;
 
 export const loadConfig = () => ({
@@ -66,6 +83,24 @@ export const loadConfig = () => ({
   breaker: {
     threshold: number('FRONTDOOR_BREAKER_THRESHOLD', 5),
     resetMs: number('FRONTDOOR_BREAKER_RESET_MS', 30_000),
+  },
+
+  stream: {
+    /**
+     * `proxy` relays every sync/stream request to the tenant untouched. `serve`
+     * answers the ones that would be empty and relays the rest. Proxy is the
+     * default so a fresh deployment changes nothing until it is asked to.
+     */
+    mode: oneOf('FRONTDOOR_STREAM_MODE', ['proxy', 'serve'] as const, 'proxy'),
+    /**
+     * Where relayed requests go: wherever the ingress sends the tenant's other
+     * traffic. Requests arrive there with the tenant's `Host` header intact.
+     */
+    upstreamUrl: new URL(required('FRONTDOOR_UPSTREAM_URL')),
+    /** Longest a dry run may take before the request is relayed instead. */
+    decideTimeoutMs: number('FRONTDOOR_STREAM_DECIDE_TIMEOUT_MS', 2000),
+    /** Longest a relayed request may take; a cold tenant boots in seconds. */
+    proxyTimeoutMs: number('FRONTDOOR_PROXY_TIMEOUT_MS', 60_000),
   },
 });
 

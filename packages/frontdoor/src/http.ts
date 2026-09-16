@@ -29,7 +29,9 @@ export const sendError = (
   error: string,
 ) => sendJson(res, status, { message, error, statusCode: status });
 
-export const readJsonBody = async (req: IncomingMessage): Promise<unknown> => {
+export const readBody = async (
+  req: IncomingMessage,
+): Promise<Buffer | undefined> => {
   const chunks: Buffer[] = [];
   let size = 0;
 
@@ -41,15 +43,34 @@ export const readJsonBody = async (req: IncomingMessage): Promise<unknown> => {
     chunks.push(chunk as Buffer);
   }
 
-  if (size === 0) {
+  return size === 0 ? undefined : Buffer.concat(chunks);
+};
+
+export const parseJson = (body: Buffer | undefined): unknown => {
+  if (body === undefined) {
     return undefined;
   }
-
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(body.toString('utf8'));
   } catch {
     throw new BadRequest('Malformed JSON body');
   }
+};
+
+export const readJsonBody = async (req: IncomingMessage): Promise<unknown> =>
+  parseJson(await readBody(req));
+
+/** One newline-delimited JSON document, the way the server streams sync data. */
+export const sendJsonLines = (
+  res: ServerResponse,
+  status: number,
+  lines: string,
+) => {
+  res.writeHead(status, {
+    'content-type': 'application/jsonlines+json',
+    'content-length': Buffer.byteLength(lines),
+  });
+  res.end(lines);
 };
 
 export const asStringArray = (value: unknown, field: string): string[] => {

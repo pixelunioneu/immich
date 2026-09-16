@@ -20,6 +20,16 @@ run = "vite build"
 env._.path = "./node_modules/.bin"
 run = "vitest"
 
+# Needs Docker. Runs test/medium/*.spec.ts on the server's own medium-test
+# harness (its testcontainers Postgres, migrations and SyncTestContext) so the
+# front door's decision is checked against the real sync service on a real
+# database. Nothing is shimmed there: only the spec directory differs from the
+# server's own medium run.
+[tasks."test-medium"]
+dir = "../../server"
+env._.path = "./node_modules/.bin"
+run = "vitest --run --config test/vitest.config.medium.mjs --dir ../packages/frontdoor"
+
 [tasks.check]
 env._.path = "./node_modules/.bin"
 run = "tsc --noEmit"

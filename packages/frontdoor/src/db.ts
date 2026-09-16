@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import pg from 'pg';
+import Cursor from 'pg-cursor';
 import type { DB } from 'src/schema';
 import type { Config } from './config.js';
 import { FrontdoorError, TenantDatabaseUnavailable } from './errors.js';
@@ -129,7 +130,11 @@ export class TenantPools {
     // A pool-level error must never take the process down: the tenant fails, not the fleet.
     pool.on('error', () => this.recordFailure(tenant));
 
-    const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
+    // The server's sync repository streams its queries; with `pg` that needs a
+    // cursor implementation on the dialect.
+    const db = new Kysely<DB>({
+      dialect: new PostgresDialect({ pool, cursor: Cursor }),
+    });
 
     // Checked once per pool, before the pool is used for anything. Makes the
     // tenant-to-database mapping load-bearing at runtime rather than trusting

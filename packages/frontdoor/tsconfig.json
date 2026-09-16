@@ -16,7 +16,14 @@
       // Server sources import each other as `src/...`, so this alias has to point at
       // the server package for those imports to resolve. Frontdoor's own modules use
       // relative imports and never go through it.
-      "src/*": ["../../server/src/*"]
+      "src/*": ["../../server/src/*"],
+      // The bundled SyncService is constructed against the shim BaseService (see
+      // vite.config.ts), so the typecheck must see the same constructor. The other
+      // shims only swap runtime behaviour; their real modules are typechecked as-is,
+      // which is why the NestJS packages appear as devDependencies.
+      "src/services/base.service": ["./src/shims/base.service.ts"],
+      // The medium specs use the server's test harness the same way.
+      "test/*": ["../../server/test/*"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -24,6 +31,9 @@
     "strict": true,
     "target": "es2024"
   },
-  "exclude": ["dist", "node_modules", "vite.config.ts"],
+  // test/medium runs on the server's own vitest harness (see mise.toml) and
+  // imports its test factories, which reach the whole server graph; that graph
+  // is typechecked by the server package, not here.
+  "exclude": ["dist", "node_modules", "vite.config.ts", "test/medium"],
   "include": ["src/**/*", "test/**/*"]
 }

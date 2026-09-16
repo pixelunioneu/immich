@@ -126,3 +126,13 @@ metrics.describe(
   'gauge',
   'Tenants currently failing fast.',
 );
+metrics.describe(
+  'frontdoor_stream_decisions_total',
+  'counter',
+  'sync/stream dry runs, by verdict and, for busy, why.',
+);
+metrics.describe(
+  'frontdoor_proxy_latency_seconds',
+  'summary',
+  'Time spent relaying a request to the tenant, by outcome.',
+);

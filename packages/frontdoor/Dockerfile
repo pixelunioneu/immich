@@ -15,11 +15,20 @@ WORKDIR /usr/src/app
 
 COPY ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./.pnpmfile.cjs ./
 COPY ./packages/frontdoor ./packages/frontdoor/
-# The package bundles server sources: the Kysely schema types and the user-agent
-# parsing the session refresh depends on.
+# The package bundles server sources: the sync service and repository, the
+# Kysely schema types and the user-agent parsing the session refresh depends on.
 COPY ./server ./server/
+# A workspace dependency of the bundled server sources. Only its manifest, so
+# pnpm can link it, and its source, which is bundled directly (see vite.config.ts).
+COPY ./packages/plugin-sdk/package.json ./packages/plugin-sdk/
+COPY ./packages/plugin-sdk/src ./packages/plugin-sdk/src/
 
 RUN pnpm --filter @immich/frontdoor --frozen-lockfile --force install
+# The bundled server sources resolve their imports against server/node_modules,
+# which is never installed here. Every package they reach for at runtime is
+# declared by this package, so let them find it there. A missing one fails the
+# build, which is the right time to find out.
+RUN ln -s /usr/src/app/packages/frontdoor/node_modules /usr/src/app/server/node_modules
 RUN pnpm --filter @immich/frontdoor run build
 
 FROM node:22-bookworm-slim AS runtime

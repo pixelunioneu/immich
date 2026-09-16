@@ -18,7 +18,7 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SyncEntityType } from 'src/enum';
+import { SyncRequestType } from 'src/enum';
 import { mimeTypes } from 'src/utils/mime-types';
 
 const contract = {
@@ -28,8 +28,10 @@ const contract = {
     image: Object.keys(mimeTypes.image),
     sidecar: Object.keys(mimeTypes.sidecar),
   },
-  // The set setAcks validates against.
-  syncEntityTypes: Object.values(SyncEntityType),
+  // The set the server's request validation accepts for sync/stream `types`.
+  // `streamInternal` itself silently skips unknown types, so the front door has
+  // to reject them the way the controller would before deciding anything.
+  syncRequestTypes: Object.values(SyncRequestType),
 };
 
 const target = join(

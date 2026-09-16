@@ -48,9 +48,37 @@ jobs:
       - name: Run checks
         run: mise run ci-unit
 
+  medium:
+    name: Frontdoor Medium Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The medium specs run on the server's own harness (testcontainers
+      # Postgres, migrations, SyncTestContext), so the server package has to be
+      # installed too. This is what proves the sync/stream decision against the
+      # real sync service on a real database.
+      - name: Install
+        run: |
+          mise run //server:install
+          mise run //packages/frontdoor:install
+
+      - name: Run medium tests
+        run: mise run //packages/frontdoor:test-medium
+
   success-check:
     name: Frontdoor Checks Success
-    needs: [unit]
+    needs: [unit, medium]
     permissions: {}
     runs-on: ubuntu-latest
     if: always()

@@ -15,19 +15,38 @@
     "build": "vite build",
     "check": "tsc --noEmit",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:medium": "cd ../../server && vitest --run --config test/vitest.config.medium.mjs --dir ../packages/frontdoor"
   },
   "dependencies": {
+    "@immich/plugin-sdk": "workspace:*",
+    "@sentry/node": "^10.74.0",
     "kysely": "0.28.17",
+    "luxon": "^3.4.2",
     "pg": "^8.11.3",
-    "ua-parser-js": "^2.0.0"
+    "pg-cursor": "^2.15.3",
+    "sanitize-filename": "^1.6.3",
+    "ua-parser-js": "^2.0.0",
+    "validator": "^13.12.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
+    "@immich/sql-tools": "^0.6.3",
+    "@nestjs/common": "^11.0.4",
+    "@nestjs/swagger": "^11.4.2",
     "@types/express": "^5.0.0",
+    "@types/lodash": "^4.14.197",
+    "@types/luxon": "^3.6.2",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.15.5",
+    "@types/pg-cursor": "^2.7.2",
+    "@types/validator": "^13.15.2",
+    "lodash": "^4.17.21",
+    "nestjs-zod": "^5.5.0",
+    "rxjs": "^7.8.1",
     "typescript": "^5.9.3",
+    "uuid": "^14.0.0",
     "vite": "^7.0.0",
     "vitest": "^4.0.0"
   }

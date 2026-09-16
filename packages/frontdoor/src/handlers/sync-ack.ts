@@ -1,106 +1,30 @@
 import type { Kysely } from 'kysely';
 import type { DB } from 'src/schema';
-import { InvalidAckType } from '../errors.js';
-import contract from '../generated/contract.json' with { type: 'json' };
+import { syncService } from '../sync-service.js';
+import { type SessionAuth, toAuthDto } from './auth-dto.js';
 
 /**
- * Sync checkpoints, mirroring `SyncService.getAcks`, `setAcks` and `deleteAcks`.
+ * Sync checkpoints, served by the server's own `SyncService.getAcks`, `setAcks`
+ * and `deleteAcks`, bundled unchanged. The ack parsing, the reset short-circuit,
+ * last-ack-per-type and the unknown-type 400 are all upstream's code.
  *
- * The rows written here carry a database-side `updatedAt` trigger and an `updateId`
- * (uuid v7) column, so a plain upsert leaves them byte-identical to what the tenant's
- * own instance would have written. That is what keeps sync state coherent no matter
- * which of the two served the request.
+ * The rows written carry a database-side `updatedAt` trigger and an `updateId`
+ * (uuid v7) column, so the upsert leaves them byte-identical to what the tenant's
+ * own instance would have written. That is what keeps sync state coherent no
+ * matter which of the two served the request.
  */
 
-const SYNC_ENTITY_TYPES = new Set<string>(contract.syncEntityTypes);
+export const getAcks = (db: Kysely<DB>, auth: SessionAuth) =>
+  syncService(db, 'live').getAcks(toAuthDto(auth));
 
-const SYNC_RESET = 'SyncResetV1';
+export const setAcks = (db: Kysely<DB>, auth: SessionAuth, acks: string[]) =>
+  syncService(db, 'live').setAcks(toAuthDto(auth), { acks });
 
-if (!SYNC_ENTITY_TYPES.has(SYNC_RESET)) {
-  // Guards against upstream renaming the reset sentinel: without it a reset would
-  // be rejected as an unknown type instead of clearing the session's progress.
-  throw new Error(`${SYNC_RESET} is missing from the generated contract`);
-}
-
-/** Mirrors `fromAck`: `type|updateId|extraId`, split on the first two separators. */
-export const ackType = (ack: string): string => ack.split('|', 3)[0] ?? '';
-
-export const getAcks = (db: Kysely<DB>, sessionId: string) =>
-  db
-    .selectFrom('session_sync_checkpoint')
-    .select(['type', 'ack'])
-    .where('sessionId', '=', sessionId)
-    .execute();
-
-export const setAcks = async (
+export const deleteAcks = (
   db: Kysely<DB>,
-  sessionId: string,
-  acks: string[],
-): Promise<void> => {
-  const checkpoints = new Map<
-    string,
-    { sessionId: string; type: never; ack: string }
-  >();
-
-  for (const ack of acks) {
-    const type = ackType(ack);
-
-    // A reset short-circuits the whole request: remaining acks are ignored, exactly
-    // as upstream does.
-    if (type === SYNC_RESET) {
-      await resetSyncProgress(db, sessionId);
-      return;
-    }
-
-    if (!SYNC_ENTITY_TYPES.has(type)) {
-      throw new InvalidAckType(type);
-    }
-
-    // Last ack per type wins. Upstream carries a TODO about picking the latest
-    // instead; this deliberately reproduces the current behaviour rather than
-    // diverging from the instance it stands in for.
-    checkpoints.set(type, { sessionId, type: type as never, ack });
-  }
-
-  if (checkpoints.size === 0) {
-    return;
-  }
-
-  await db
-    .insertInto('session_sync_checkpoint')
-    .values([...checkpoints.values()])
-    .onConflict((oc) =>
-      oc
-        .columns(['sessionId', 'type'])
-        .doUpdateSet((eb) => ({ ack: eb.ref('excluded.ack') })),
-    )
-    .execute();
-};
-
-export const deleteAcks = async (
-  db: Kysely<DB>,
-  sessionId: string,
+  auth: SessionAuth,
   types?: string[],
-): Promise<void> => {
-  let query = db
-    .deleteFrom('session_sync_checkpoint')
-    .where('sessionId', '=', sessionId);
-  if (types && types.length > 0) {
-    query = query.where('type', 'in', types as never[]);
-  }
-  await query.execute();
-};
-
-/** Mirrors `SessionRepository.resetSyncProgress`. */
-export const resetSyncProgress = (db: Kysely<DB>, sessionId: string) =>
-  db.transaction().execute(async (tx) => {
-    await tx
-      .updateTable('session')
-      .set({ isPendingSyncReset: false })
-      .where('id', '=', sessionId)
-      .execute();
-    await tx
-      .deleteFrom('session_sync_checkpoint')
-      .where('sessionId', '=', sessionId)
-      .execute();
+) =>
+  syncService(db, 'live').deleteAcks(toAuthDto(auth), {
+    types: types as never,
   });
