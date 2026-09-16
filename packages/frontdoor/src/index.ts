@@ -75,6 +75,12 @@ export const createApp = (
     const path = url.pathname;
     const method = req.method ?? 'GET';
 
+    // Resolved for every request, not just sync/ack, so the access log can
+    // attribute Tier 0 traffic to a tenant too. The sync/ack handler below
+    // re-derives the same value where an unresolved tenant is a 400, not just
+    // a blank log field.
+    access.tenant = tenantFromHost(req.headers.host, config.baseDomain) ?? undefined;
+
     // Operational endpoints, not part of the Immich API surface.
     if (path === '/healthz') {
       return sendJson(res, 200, { status: 'ok' });
@@ -112,7 +118,6 @@ export const createApp = (
     // Tier 1: the tenant's own database.
     const endpoint = `sync-ack-${method.toLowerCase()}`;
     const tenant = tenantFromHost(req.headers.host, config.baseDomain);
-    access.tenant = tenant ?? undefined;
     if (!tenant) {
       metrics.increment('frontdoor_errors_total', {
         reason: 'unresolved_tenant',
