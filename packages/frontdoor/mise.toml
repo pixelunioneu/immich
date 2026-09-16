@@ -27,8 +27,14 @@ run = "vitest"
 # server's own medium run.
 [tasks."test-medium"]
 dir = "../../server"
-env._.path = "./node_modules/.bin"
-run = "vitest --run --config test/vitest.config.medium.mjs --dir ../packages/frontdoor"
+# mise resolves env._.path against this config's directory, not `dir`, so the
+# plain "./node_modules/.bin" used by the other tasks here would put the front
+# door's own vitest on PATH while cwd is the server. That binary resolves the
+# server's imports from packages/frontdoor and its type-only imports
+# (`Generated` from @immich/sql-tools, from kysely) then fail as missing named
+# exports. The server's harness has to run on the server's vitest.
+env._.path = "../../server/node_modules/.bin"
+run = "vitest --run --config test/vitest.config.frontdoor-medium.mjs"
 
 [tasks.check]
 env._.path = "./node_modules/.bin"
@@ -52,6 +58,18 @@ run = [
   "git diff --exit-code src/generated/contract.json",
 ]
 
+# Mirrors //server:ci-medium. The medium specs import the server, which pulls in
+# @immich/plugin-sdk -- a workspace package that resolves through ./dist, so it
+# has to be built or vitest cannot even collect the specs.
+[tasks.ci-medium]
+run = [
+  { task = "//server:install" },
+  { task = ":install" },
+  { task = "//:plugins" },
+  { task = "//packages/plugin-core:build" },
+  { task = ":test-medium" },
+]
+
 [tasks.ci-unit]
 run = [
   { task = ":install" },
@@ -62,4 +80,4 @@ run = [
 ]
 
 [tasks.checklist]
-run = [{ task = ":ci-unit" }]
+run = [{ task = ":ci-unit" }, { task = ":ci-medium" }]

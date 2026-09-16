@@ -392,6 +392,12 @@ importers:
       nestjs-zod:
         specifier: ^5.5.0
         version: 5.5.0(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/swagger@11.4.7(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(reflect-metadata@0.2.2)(typescript@5.9.3))(rxjs@7.8.2)(zod@4.4.3)
+      prettier:
+        specifier: ^3.8.3
+        version: 3.9.6
+      prettier-plugin-sort-json:
+        specifier: ^4.2.0
+        version: 4.2.0(prettier@3.9.6)
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2

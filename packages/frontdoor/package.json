@@ -16,7 +16,7 @@
     "check": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:medium": "cd ../../server && vitest --run --config test/vitest.config.medium.mjs --dir ../packages/frontdoor"
+    "test:medium": "cd ../../server && ./node_modules/.bin/vitest --run --config test/vitest.config.frontdoor-medium.mjs"
   },
   "dependencies": {
     "@immich/plugin-sdk": "workspace:*",
@@ -44,6 +44,8 @@
     "@types/validator": "^13.15.2",
     "lodash": "^4.17.21",
     "nestjs-zod": "^5.5.0",
+    "prettier": "^3.8.3",
+    "prettier-plugin-sort-json": "^4.2.0",
     "rxjs": "^7.8.1",
     "typescript": "^5.9.3",
     "uuid": "^14.0.0",

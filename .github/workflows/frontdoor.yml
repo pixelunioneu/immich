@@ -66,16 +66,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # The medium specs run on the server's own harness (testcontainers
-      # Postgres, migrations, SyncTestContext), so the server package has to be
-      # installed too. This is what proves the sync/stream decision against the
-      # real sync service on a real database.
-      - name: Install
-        run: |
-          mise run //server:install
-          mise run //packages/frontdoor:install
-
+      # Postgres, migrations, SyncTestContext), so ci-medium installs the server
+      # package and builds the plugin SDK first. This is what proves the
+      # sync/stream decision against the real sync service on a real database.
       - name: Run medium tests
-        run: mise run //packages/frontdoor:test-medium
+        run: mise run //packages/frontdoor:ci-medium
 
   success-check:
     name: Frontdoor Checks Success
