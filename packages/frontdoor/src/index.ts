@@ -48,15 +48,54 @@ import { tenantFromHost } from './tenant.js';
 const SYNC_ACK = '/api/sync/ack';
 const SYNC_STREAM = '/api/sync/stream';
 
+/** Paths that never reach the app logic and would just be noise in the access log. */
+const UNLOGGED_PATHS = new Set(['/healthz', '/metrics']);
+
+type AccessContext = { tenant?: string };
+
+/**
+ * One line per request, to stdout, for the operator to correlate a tenant with
+ * the traffic this service answered on its behalf. Deliberately logs only the
+ * path, not the full URL: Immich accepts `?apiKey=` on requests, and the query
+ * string is not something this line should ever be able to leak.
+ */
+const logAccess = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  access: AccessContext,
+  start: number,
+) => {
+  if (UNLOGGED_PATHS.has(path)) {
+    return;
+  }
+  const duration = (performance.now() - start).toFixed(2);
+  const method = req.method ?? 'GET';
+  const tenant = access.tenant ?? '-';
+  console.log(
+    `${method} ${path} ${res.statusCode} ${duration}ms tenant=${tenant}`,
+  );
+};
+
 export const createApp = (
   config: Config,
   pools: TenantPools,
   serverInfo: ServerInfo,
 ) => {
-  const handle = async (req: IncomingMessage, res: ServerResponse) => {
+  const handle = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    access: AccessContext,
+  ) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = url.pathname;
     const method = req.method ?? 'GET';
+
+    // Resolved for every request, not just sync/ack, so the access log can
+    // attribute Tier 0 traffic to a tenant too. The sync/ack handler below
+    // re-derives the same value where an unresolved tenant is a 400, not just
+    // a blank log field.
+    access.tenant = tenantFromHost(req.headers.host, config.baseDomain) ?? undefined;
 
     // Operational endpoints, not part of the Immich API surface.
     if (path === '/healthz') {
@@ -279,7 +318,12 @@ export const createApp = (
   };
 
   return createServer((req, res) => {
-    handle(req, res).catch((error) => onError(res, error));
+    const start = performance.now();
+    const access: AccessContext = {};
+    const path = (req.url ?? '/').split('?')[0];
+    handle(req, res, access)
+      .catch((error) => onError(res, error))
+      .finally(() => logAccess(req, res, path, access, start));
   });
 };
 
