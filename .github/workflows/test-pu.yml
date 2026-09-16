@@ -59,6 +59,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The exif and library specs read fixtures from the e2e/test-assets
+          # submodule. Without it exiftool silently yields nothing and the specs
+          # fail on the resulting dates. Upstream's test.yml checks it out the
+          # same way.
+          submodules: 'recursive'
 
       - name: Setup Mise
         uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
