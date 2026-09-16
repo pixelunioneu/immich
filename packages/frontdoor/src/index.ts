@@ -95,7 +95,8 @@ export const createApp = (
     // attribute Tier 0 traffic to a tenant too. The sync/ack handler below
     // re-derives the same value where an unresolved tenant is a 400, not just
     // a blank log field.
-    access.tenant = tenantFromHost(req.headers.host, config.baseDomain) ?? undefined;
+    access.tenant =
+      tenantFromHost(req.headers.host, config.baseDomain) ?? undefined;
 
     // Operational endpoints, not part of the Immich API surface.
     if (path === '/healthz') {

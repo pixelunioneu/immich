@@ -1,27 +1,5 @@
 {
   "mediaTypes": {
-    "video": [
-      ".3gp",
-      ".3gpp",
-      ".avi",
-      ".flv",
-      ".insv",
-      ".m2t",
-      ".m2ts",
-      ".m4v",
-      ".mkv",
-      ".mov",
-      ".mp4",
-      ".mpe",
-      ".mpeg",
-      ".mpg",
-      ".mts",
-      ".mxf",
-      ".ts",
-      ".vob",
-      ".webm",
-      ".wmv"
-    ],
     "image": [
       ".avif",
       ".bmp",
@@ -72,8 +50,28 @@
       ".tif",
       ".tiff"
     ],
-    "sidecar": [
-      ".xmp"
+    "sidecar": [".xmp"],
+    "video": [
+      ".3gp",
+      ".3gpp",
+      ".avi",
+      ".flv",
+      ".insv",
+      ".m2t",
+      ".m2ts",
+      ".m4v",
+      ".mkv",
+      ".mov",
+      ".mp4",
+      ".mpe",
+      ".mpeg",
+      ".mpg",
+      ".mts",
+      ".mxf",
+      ".ts",
+      ".vob",
+      ".webm",
+      ".wmv"
     ]
   },
   "syncRequestTypes": [
