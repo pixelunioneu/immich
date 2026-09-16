@@ -57,7 +57,7 @@ export class TenantPools {
   ): Promise<T> {
     const breaker = this.failures.get(tenant);
     if (breaker && breaker.openUntil > Date.now()) {
-      throw new TenantDatabaseUnavailable('circuit open');
+      throw new TenantDatabaseUnavailable('circuit_open');
     }
 
     const entry = this.acquire(tenant);
@@ -69,14 +69,21 @@ export class TenantPools {
       this.failures.delete(tenant);
       return result;
     } catch (error) {
-      this.recordFailure(tenant);
-      // Anything that is not a deliberate error is the database failing, not a
-      // bug here. Reclassify it so the caller answers 503 and logs one line,
-      // rather than 500 with a stack trace on every request of an outage.
+      // Three kinds of failure, kept apart on purpose:
+      //  - a deliberate error (a 400, or an already-classified 503) passes
+      //    through and does not count against the tenant;
+      //  - a driver error is the database failing: it trips the breaker and
+      //    becomes a 503 with a one-line log, not a stack trace per request;
+      //  - anything else is a bug in this service and must surface as a 500,
+      //    not be dressed up as an outage.
       if (error instanceof FrontdoorError) {
         throw error;
       }
-      throw new TenantDatabaseUnavailable(driverReason(error));
+      if (isDriverError(error)) {
+        this.recordFailure(tenant);
+        throw new TenantDatabaseUnavailable(driverReason(error));
+      }
+      throw error;
     } finally {
       const seconds = Number(process.hrtime.bigint() - started) / 1e9;
       metrics.observe('frontdoor_db_latency_seconds', seconds, { endpoint });
@@ -124,15 +131,26 @@ export class TenantPools {
 
     const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 
-    const entry: Entry = {
-      pool,
-      db,
-      lastUsed: Date.now(),
-      // Checked once per pool, before the pool is used for anything. Makes the
-      // tenant-to-database mapping load-bearing at runtime rather than trusting
-      // that the connection options were assembled correctly.
-      verified: guardUnawaited(verifyDatabase(db, database)),
-    };
+    // Checked once per pool, before the pool is used for anything. Makes the
+    // tenant-to-database mapping load-bearing at runtime rather than trusting
+    // that the connection options were assembled correctly.
+    const verified = verifyDatabase(db, database);
+
+    const entry: Entry = { pool, db, lastUsed: Date.now(), verified };
+
+    // A failed check counts as a database failure, and the entry is dropped so
+    // the next request builds a fresh pool and tries again. Without this a
+    // transient failure - a timeout during a database restart, say - would leave
+    // a permanently rejected promise in place, and because every request
+    // refreshes lastUsed the reaper would never evict it while traffic kept
+    // coming. This handler also marks the rejection observed: a pool evicted
+    // before any request awaits it would otherwise crash the process.
+    verified.catch(() => {
+      this.recordFailure(tenant);
+      if (this.entries.get(tenant) === entry) {
+        this.close(tenant);
+      }
+    });
 
     this.entries.set(tenant, entry);
     this.report();
@@ -234,22 +252,26 @@ const verifyDatabase = async (
   db: Kysely<DB>,
   expected: string,
 ): Promise<void> => {
-  const row = await sql<{
-    current: string;
-  }>`select current_database() as current`.execute(db);
-  const actual = row.rows[0]?.current;
+  let actual: string | undefined;
+  try {
+    const row = await sql<{
+      current: string;
+    }>`select current_database() as current`.execute(db);
+    actual = row.rows[0]?.current;
+  } catch (error) {
+    // Classified here so the awaiting caller sees one FrontdoorError and the
+    // failure is counted exactly once, by the handler attached in acquire().
+    throw new TenantDatabaseUnavailable(driverReason(error));
+  }
   if (actual !== expected) {
-    throw new TenantDatabaseUnavailable('database mismatch');
+    throw new TenantDatabaseUnavailable('database_mismatch');
   }
 };
 
 /**
- * A pool can be created and then evicted before any request uses it, which would
- * leave the verification promise rejected and unobserved - an unhandled rejection
- * takes the process down. Attaching a no-op handler marks it observed without
- * changing what `await` on it does.
+ * pg sets a string `code` on every error it raises: an errno such as
+ * ECONNREFUSED on connection failures, a SQLSTATE on query failures. A bug in
+ * this service throws a TypeError or similar, which has none.
  */
-const guardUnawaited = <T>(promise: Promise<T>): Promise<T> => {
-  promise.catch(() => undefined);
-  return promise;
-};
+const isDriverError = (error: unknown): boolean =>
+  typeof (error as { code?: unknown })?.code === 'string';

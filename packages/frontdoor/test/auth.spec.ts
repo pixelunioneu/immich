@@ -31,6 +31,20 @@ describe('readCredentials', () => {
     ).toBe('e');
   });
 
+  it('returns a malformed cookie value raw instead of throwing', () => {
+    // decodeURIComponent('%') throws. The server's cookie parser falls back to
+    // the raw value; so must this, or a garbage cookie from an unauthenticated
+    // client would be recorded as a database failure and trip the tenant's
+    // circuit breaker.
+    expect(
+      readCredentials({ cookie: 'immich_access_token=%' }, query()).session,
+    ).toBe('%');
+    expect(
+      readCredentials({ cookie: 'immich_access_token=%E0%A4%A' }, query())
+        .session,
+    ).toBe('%E0%A4%A');
+  });
+
   it('ignores a non-bearer authorization scheme', () => {
     expect(
       readCredentials({ authorization: 'Basic abc' }, query()).session,

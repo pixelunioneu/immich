@@ -38,10 +38,23 @@ const cookieToken = (headers: IncomingHttpHeaders): string | undefined => {
       continue;
     }
     if (part.slice(0, index).trim() === 'immich_access_token') {
-      return decodeURIComponent(part.slice(index + 1).trim());
+      return decode(part.slice(index + 1).trim());
     }
   }
   return undefined;
+};
+
+/**
+ * Mirrors the `cookie` package the server uses: a malformed percent-sequence
+ * yields the raw value rather than an exception. decodeURIComponent('%') throws,
+ * and an exception here would be classified as a database failure.
+ */
+const decode = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 };
 
 export type Credentials = { session?: string; hasOtherScheme: boolean };
