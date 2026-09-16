@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Stats } from 'node:fs';
 import { resolve } from 'node:path';
 import { Writable } from 'node:stream';
+import { StorageCore } from 'src/cores/storage.core';
 import { AssetFace } from 'src/database';
 import { AuthDto, LoginResponseDto } from 'src/dtos/auth.dto';
 import { SystemConfig } from 'src/dtos/config.dto';
@@ -79,8 +80,10 @@ import { StackTable } from 'src/schema/tables/stack.table';
 import { TagAssetTable } from 'src/schema/tables/tag-asset.table';
 import { TagTable } from 'src/schema/tables/tag.table';
 import { UserTable } from 'src/schema/tables/user.table';
+import { AuthService } from 'src/services/auth.service';
 import { BASE_SERVICE_DEPENDENCIES, BaseService } from 'src/services/base.service';
 import { MetadataService } from 'src/services/metadata.service';
+import { PixelUnionAuthService } from 'src/services/pixelunion-auth.service';
 import { SyncService } from 'src/services/sync.service';
 import { ClassConstructor, ClassConstructorsToInstances, UploadFile } from 'src/types';
 import { getConfig, updateConfig } from 'src/utils/config';
@@ -120,8 +123,37 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
     Service: S,
     private options: MediumTestOptions,
   ) {
+    // PixelUnion: AssetMediaService.uploadAsset resolves the library folder
+    // through StorageCore to check free space, which throws unless a media
+    // location is set. Specs that care set their own at module scope or in
+    // beforeAll, and those still win; this is only a default for the ones whose
+    // upstream version never needed one.
+    try {
+      StorageCore.getMediaLocation();
+    } catch {
+      StorageCore.setMediaLocation('/data');
+    }
+
     this.sutDeps = this.makeDeps(options);
     this.sut = new Service(...this.sutDeps) as InstanceType<S>;
+
+    // PixelUnion: the fork reaches a few collaborators through Nest property
+    // injection rather than BaseService's constructor. This harness builds
+    // services positionally and never runs Nest's injector, so those properties
+    // stay undefined. Fill them here so upstream's own specs need no edits.
+    const injected = this.sut as unknown as Record<string, unknown>;
+    if (Service === (AuthService as unknown as S)) {
+      const pixelUnionAuthMock = automock(PixelUnionAuthService, {
+        // Only the logger is touched in the constructor; the repositories are
+        // never reached because every method is mocked.
+        args: [undefined, undefined, undefined, undefined, undefined, { setContext: () => {} }],
+        strict: false,
+      });
+      // logout() chains .catch() onto this, so it has to hand back a promise.
+      pixelUnionAuthMock.revokeStoredToken.mockResolvedValue(void 0);
+      injected.pixelUnionAuthService = pixelUnionAuthMock;
+    }
+
     this.database = options.database;
   }
 
@@ -146,6 +178,15 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
 
       if (options.mock.includes(dep)) {
         return newMockRepository(dep);
+      }
+
+      // PixelUnion: fork code paths read env through ConfigRepository in services
+      // whose upstream specs predate them and so never list it (for example the
+      // upload quota check in AssetMediaService). It takes no database and no
+      // constructor arguments, so handing over the real one is cheaper than
+      // adding it to every spec. An explicit `mock` entry still wins.
+      if (dep === ConfigRepository) {
+        return this.get(dep);
       }
     }) as unknown as ClassConstructorsToInstances<BaseServiceDeps>;
   }
@@ -598,7 +639,12 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     }
 
     case EventRepository: {
-      return automock(EventRepository, { args: [undefined, undefined, { setContext: () => {} }] });
+      const mock = automock(EventRepository, { args: [undefined, undefined, { setContext: () => {} }] });
+      // PixelUnion: UserService.updateMe emits UserUpdate, which upstream's own
+      // updateMe does not, so its specs mock EventRepository strictly and never
+      // stub emit. Default it here rather than editing those specs.
+      mock.emit.mockResolvedValue(void 0);
+      return mock;
     }
 
     case JobRepository: {
@@ -624,7 +670,12 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     }
 
     case StorageRepository: {
-      return automock(StorageRepository, { args: [{ setContext: () => {} }] });
+      const mock = automock(StorageRepository, { args: [{ setContext: () => {} }] });
+      // PixelUnion: AssetMediaService.uploadAsset gates on free space via
+      // requireDiskSpace(). Report an effectively empty disk so the gate is open
+      // by default; a spec that cares can override it.
+      mock.checkDiskUsage.mockResolvedValue({ available: Number.MAX_SAFE_INTEGER, free: 0, total: 0 });
+      return mock;
     }
 
     default: {
