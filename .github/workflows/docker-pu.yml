@@ -63,9 +63,25 @@ jobs:
             echo "PUBLIC_API_URL=https://api.nonprd.tech.pixelunion.eu" >> web/.env
           fi
 
+  # The release build is gated on these. They carry no path filter: a tag build
+  # tests everything it is about to push, regardless of what the diff touched.
+  test-frontdoor:
+    name: Frontdoor Tests
+    needs: pre-job
+    permissions:
+      contents: read
+    uses: ./.github/workflows/frontdoor.yml
+
+  test-pu:
+    name: Server & Web Tests
+    needs: pre-job
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test-pu.yml
+
   retag_server:
     name: Re-Tag Server
-    needs: pre-job
+    needs: [pre-job, test-frontdoor, test-pu]
     permissions:
       contents: read
       packages: write
@@ -94,7 +110,7 @@ jobs:
 
   server:
     name: Build and Push Server
-    needs: pre-job
+    needs: [pre-job, test-frontdoor, test-pu]
     if: ${{ needs.pre-job.outputs.should_run_server == 'true' }}
     uses: immich-app/devtools/.github/workflows/multi-runner-build.yml@094bfb927b8cd75b343abaac27b3241be0fccfe9 # multi-runner-build-workflow-0.1.0
     permissions:
@@ -115,7 +131,7 @@ jobs:
 
   web:
     name: Build and Push web
-    needs: pre-job
+    needs: [pre-job, test-frontdoor, test-pu]
     if: ${{ needs.pre-job.outputs.should_run_server == 'true' }}
     uses: immich-app/devtools/.github/workflows/multi-runner-build.yml@094bfb927b8cd75b343abaac27b3241be0fccfe9 # multi-runner-build-workflow-0.1.0
     permissions:
@@ -133,7 +149,7 @@ jobs:
 
   frontdoor:
     name: Build and Push frontdoor
-    needs: pre-job
+    needs: [pre-job, test-frontdoor, test-pu]
     if: ${{ needs.pre-job.outputs.should_run_frontdoor == 'true' }}
     uses: immich-app/devtools/.github/workflows/multi-runner-build.yml@094bfb927b8cd75b343abaac27b3241be0fccfe9 # multi-runner-build-workflow-0.1.0
     permissions:
@@ -151,7 +167,7 @@ jobs:
 
   success-check-server:
     name: Docker Build & Push Server Success
-    needs: [server, retag_server]
+    needs: [server, retag_server, test-frontdoor, test-pu]
     permissions: {}
     runs-on: ubuntu-latest
     if: always()

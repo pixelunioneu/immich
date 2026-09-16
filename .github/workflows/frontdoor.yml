@@ -1,6 +1,7 @@
 name: Frontdoor
 
 on:
+  workflow_call:
   push:
     branches: [main, 'release/*']
     paths:
@@ -18,7 +19,7 @@ on:
       - '.github/workflows/frontdoor.yml'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: frontdoor-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: {}

@@ -1,0 +1,71 @@
+name: Test PU
+
+# Reusable suite for the fork's release pipeline. Upstream's test.yml is not
+# present in this fork, so these are the only runs of the server and web tests
+# in CI. The frontdoor has its own suite in frontdoor.yml.
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  server-unit:
+    name: Server Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # install, //:plugins, prettier, eslint, tsc, vitest
+      - name: Run checks
+        run: mise run //server:ci-unit
+
+  web-unit:
+    name: Web Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # sdk install + build, install, prettier, tsc + svelte-check, vitest
+      - name: Run checks
+        run: mise run //web:ci-unit
+
+  server-medium:
+    name: Server Medium Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Needs Docker: the medium specs spin up Postgres via testcontainers and
+      # run the migrations before each suite. Slowest job in the pipeline.
+      - name: Run medium tests
+        run: mise run //server:ci-medium
