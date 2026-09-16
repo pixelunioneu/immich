@@ -33,10 +33,10 @@ describe(PuApiRepository.name, () => {
     };
     sut = new PuApiRepository(configRepository as unknown as ConfigRepository, logger as never);
     vitest.mocked(readFile).mockResolvedValue('service-token');
-    vitest.spyOn(global, 'fetch').mockResolvedValue({
+    vitest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ ok: true }),
+      json: () => Promise.resolve({ ok: true }),
       status: 200,
       statusText: 'OK',
     } as Response);
@@ -50,7 +50,7 @@ describe(PuApiRepository.name, () => {
     await sut.syncTenantUsers();
 
     expect(readFile).toHaveBeenCalledWith('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8');
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       new URL('/internal/api/immich/tenant-users/sync?tenant=pond', 'http://pu-api'),
       expect.objectContaining({
         method: 'POST',
@@ -68,8 +68,10 @@ describe(PuApiRepository.name, () => {
 
     await sut.syncTenantUsers();
 
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(logger.debug).toHaveBeenCalledWith('Skipping PU API tenant sync, PU_API_HOST or PU_TENANT_NAME is not configured');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(logger.debug).toHaveBeenCalledWith(
+      'Skipping PU API tenant sync, PU_API_HOST or PU_TENANT_NAME is not configured',
+    );
   });
 
   it('should return null reverse geocode when token cannot be read', async () => {
@@ -81,19 +83,20 @@ describe(PuApiRepository.name, () => {
     });
 
     expect(result).toBeNull();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalled();
   });
 
   it('should return reverse geocode payload', async () => {
-    vitest.spyOn(global, 'fetch').mockResolvedValue({
+    vitest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       headers: new Headers(),
-      json: async () => ({
-        country: 'NL',
-        state: 'North Holland',
-        city: 'Amsterdam',
-      }),
+      json: () =>
+        Promise.resolve({
+          country: 'NL',
+          state: 'North Holland',
+          city: 'Amsterdam',
+        }),
       status: 200,
       statusText: 'OK',
     } as Response);
@@ -104,41 +107,41 @@ describe(PuApiRepository.name, () => {
     });
 
     expect(result).toEqual({ country: 'NL', state: 'North Holland', city: 'Amsterdam' });
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       new URL('/internal/api/map/reverse-geocode?lat=52.37&lon=4.89', 'http://pu-api'),
       expect.anything(),
     );
   });
 
   it('should call reverse geocode endpoint', async () => {
-    vitest.spyOn(global, 'fetch').mockResolvedValue({
+    vitest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ country: null, state: null, city: null }),
+      json: () => Promise.resolve({ country: null, state: null, city: null }),
       status: 200,
       statusText: 'OK',
     } as Response);
 
     await sut.reverseGeocode({ latitude: 52.37, longitude: 4.89 });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       new URL('/internal/api/map/reverse-geocode?lat=52.37&lon=4.89', 'http://pu-api'),
       expect.anything(),
     );
   });
 
   it('should call search places endpoint', async () => {
-    vitest.spyOn(global, 'fetch').mockResolvedValue({
+    vitest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       headers: new Headers(),
-      json: async () => [],
+      json: () => Promise.resolve([]),
       status: 200,
       statusText: 'OK',
     } as Response);
 
     await sut.searchPlaces('amst');
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       new URL('/internal/api/map/search-places?q=amst', 'http://pu-api'),
       expect.anything(),
     );

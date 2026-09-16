@@ -127,7 +127,8 @@ export class PuApiRepository {
 
     const { puServiceAccountTokenPath } = this.configRepository.getEnv();
     try {
-      const token = (await readFile(puServiceAccountTokenPath, 'utf8')).trim();
+      const contents = await readFile(puServiceAccountTokenPath, 'utf8');
+      const token = contents.trim();
       if (!token) {
         this.logger.error(`Service account token file is empty: ${puServiceAccountTokenPath}`);
         this.tokenCache = null;
