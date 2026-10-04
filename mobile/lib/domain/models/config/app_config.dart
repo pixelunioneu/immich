@@ -10,7 +10,6 @@ import 'package:immich_mobile/domain/models/config/feature_message_config.dart';
 import 'package:immich_mobile/domain/models/config/image_config.dart';
 import 'package:immich_mobile/domain/models/config/map_config.dart';
 import 'package:immich_mobile/domain/models/config/network_config.dart';
-import 'package:immich_mobile/domain/models/config/onboarding_config.dart';
 import 'package:immich_mobile/domain/models/config/share_config.dart';
 import 'package:immich_mobile/domain/models/config/slideshow_config.dart';
 import 'package:immich_mobile/domain/models/config/theme_config.dart';
@@ -44,7 +43,6 @@ abstract class AppConfig with _$AppConfig {
     @Default(NetworkConfig()) NetworkConfig network,
     @Default(ShareConfig()) ShareConfig share,
     @Default(FeatureMessageConfig()) FeatureMessageConfig featureMessage,
-    @Default(OnboardingConfig()) OnboardingConfig onboarding,
   }) = _AppConfig;
 
   T read<T>(SettingsKey<T> key) =>
@@ -95,7 +93,6 @@ abstract class AppConfig with _$AppConfig {
             .slideshowLook => slideshow.look,
             .slideshowDirection => slideshow.direction,
             .featureMessageSeenRelease => featureMessage.seenRelease,
-            .onboardingWelcomeSeen => onboarding.welcomeSeen,
           })
           as T;
 
@@ -152,7 +149,6 @@ abstract class AppConfig with _$AppConfig {
       .slideshowLook => copyWith(slideshow: slideshow.copyWith(look: value as SlideshowLook)),
       .slideshowDirection => copyWith(slideshow: slideshow.copyWith(direction: value as SlideshowDirection)),
       .featureMessageSeenRelease => copyWith(featureMessage: featureMessage.copyWith(seenRelease: value as SemVer)),
-      .onboardingWelcomeSeen => copyWith(onboarding: onboarding.copyWith(welcomeSeen: value as bool)),
     };
   }
 }

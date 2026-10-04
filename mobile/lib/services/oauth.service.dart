@@ -1,5 +1,6 @@
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/services/pu_login.service.dart';
 import 'package:logging/logging.dart';
 import 'package:openapi/api.dart';
 
@@ -29,6 +30,23 @@ class OAuthService {
     log.info('Received Authorization URL: $authUrl');
 
     return authUrl;
+  }
+
+  /// Opens the portal login in a browser session and returns the callback URL.
+  ///
+  /// Not ephemeral: the identity provider's session cookie must be shared with the system browser,
+  /// so later sign-ins from the app (for example the server's own OAuth flow) don't ask for the
+  /// password again. On iOS this means the system "wants to use ... to sign in" alert is shown.
+  Future<String> authenticateViaPortal(String portalUrl) {
+    return FlutterWebAuth2.authenticate(
+      url: portalUrl,
+      callbackUrlScheme: callbackUrlScheme,
+    );
+  }
+
+  /// Finishes a portal login on the server that [callback] names. The endpoint must already be set.
+  Future<LoginResponseDto?> finishPortalLogin(PuLoginCallback callback, String codeVerifier) {
+    return _apiService.oAuthApi.finishOAuth(PuLoginService.toCallbackDto(callback, codeVerifier));
   }
 
   Future<LoginResponseDto?> oAuthLogin(String oauthUrl, String state, String codeVerifier) async {

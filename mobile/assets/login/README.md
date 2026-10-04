@@ -1,5 +1,5 @@
-Background collage tiles for the first-launch onboarding welcome screen
-(layout order in `onboarding_welcome.page.dart`):
+Background collage tiles for the login screen (the first screen of the app)
+(layout order in `lib/pages/login/login.page.dart`):
 
 - top-left: `tile_1.jpg`
 - top-right: `tile_3.jpg`

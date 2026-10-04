@@ -127,7 +127,7 @@ flutter:
   assets:
     - assets/
     - assets/feature_message/
-    - assets/onboarding/
+    - assets/login/
   fonts:
     - family: GoogleSans
       fonts:

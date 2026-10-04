@@ -25,6 +25,7 @@ import 'package:immich_mobile/providers/view_intent/view_intent_handler.provider
 import 'package:immich_mobile/providers/websocket.provider.dart';
 import 'package:immich_mobile/repositories/permission.repository.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/services/pu_login.service.dart';
 import 'package:immich_mobile/utils/provider_utils.dart';
 import 'package:immich_mobile/utils/semver.dart';
 import 'package:immich_mobile/utils/url_helper.dart';
@@ -40,7 +41,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginForm extends HookConsumerWidget {
-  LoginForm({super.key});
+  /// Show the subdomain form (hidden fallback) instead of the portal login buttons.
+  final bool manual;
+  final VoidCallback onShowManual;
+  final VoidCallback onExitManual;
+
+  LoginForm({super.key, required this.manual, required this.onShowManual, required this.onExitManual});
+
+  static const _registerUrl =
+      'https://portal.pixelunion.eu/order/login?plan_id=price_1RH5X5KuddcDSdPSym06PHoc&flow=register';
 
   final log = Logger('LoginForm');
 
@@ -107,11 +116,7 @@ class LoginForm extends HookConsumerWidget {
     /// Returns true if successful, false otherwise
     Future<void> getServerAuthSettings() async {
       if (serverEndpointController.text.trim().isEmpty) {
-        ImmichToast.show(
-          context: context,
-          msg: context.t.login_form_err_username_empty,
-          toastType: ToastType.error,
-        );
+        ImmichToast.show(context: context, msg: context.t.login_form_err_username_empty, toastType: ToastType.error);
         return;
       }
       final sanitizeServerUrl = normalizeServerUrl(builtServerUrl());
@@ -353,6 +358,80 @@ class LoginForm extends HookConsumerWidget {
       return base64Url.encode(digest.bytes).replaceAll('=', '');
     }
 
+    /// Stores the session from an OAuth login and continues into the app.
+    Future<void> completeOAuthLogin(LoginResponseDto loginResponseDto) async {
+      final isSuccess = await ref.read(authProvider.notifier).saveAuthInfo(accessToken: loginResponseDto.accessToken);
+
+      if (isSuccess && context.mounted) {
+        await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
+        if (isSyncRemoteDeletionsMode()) {
+          await getManageMediaPermission();
+        }
+        unawaited(handleSyncFlow());
+        if (!context.mounted) {
+          return;
+        }
+
+        unawaited(ref.read(featureMessageServiceProvider).markSeen());
+        unawaited(context.router.replaceAll([const TabShellRoute()]));
+      }
+    }
+
+    /// Logs in through the portal, which also picks the user's environment. See [PuLoginService].
+    Future<void> portalLogin() async {
+      final oAuthService = ref.read(oAuthServiceProvider);
+      final nonce = generateRandomString(32);
+      final codeVerifier = randomCodeVerifier();
+      final codeChallenge = await generatePKCECodeChallenge(codeVerifier);
+
+      final String callbackUrl;
+      try {
+        callbackUrl = await oAuthService.authenticateViaPortal(PuLoginService.buildPortalUrl(nonce, codeChallenge));
+      } on PlatformException catch (error) {
+        // The user closed the browser sheet.
+        if (error.code == 'CANCELED') {
+          return;
+        }
+        log.severe('Portal login failed: $error');
+        if (context.mounted) {
+          ImmichToast.show(
+            context: context,
+            msg: context.t.login_form_portal_failed,
+            toastType: ToastType.error,
+            gravity: ToastGravity.TOP,
+          );
+        }
+        return;
+      }
+
+      try {
+        final callback = PuLoginService.parseCallback(callbackUrl, nonce);
+        log.info('Portal login picked ${callback.serverUrl}');
+
+        await ref.read(authProvider.notifier).validateServerUrl(callback.serverUrl);
+        // Invalidate all api repository provider instance to take into account new access token
+        invalidateAllApiRepositoryProviders(ref);
+
+        final loginResponseDto = await oAuthService.finishPortalLogin(callback, codeVerifier);
+        if (loginResponseDto == null || !context.mounted) {
+          return;
+        }
+
+        await completeOAuthLogin(loginResponseDto);
+      } catch (error, stack) {
+        log.severe('Error finishing portal login: $error', stack);
+        if (!context.mounted) {
+          return;
+        }
+        ImmichToast.show(
+          context: context,
+          msg: context.t.login_form_portal_failed,
+          toastType: ToastType.error,
+          gravity: ToastGravity.TOP,
+        );
+      }
+    }
+
     Future<void> oAuthLogin() async {
       final oAuthService = ref.read(oAuthServiceProvider);
       String? oAuthServerUrl;
@@ -397,24 +476,7 @@ class LoginForm extends HookConsumerWidget {
 
           log.info("Finished OAuth login with response: ${loginResponseDto.userEmail}");
 
-          final isSuccess = await ref
-              .read(authProvider.notifier)
-              .saveAuthInfo(accessToken: loginResponseDto.accessToken);
-
-          if (isSuccess && context.mounted) {
-            await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
-            if (isSyncRemoteDeletionsMode()) {
-              await getManageMediaPermission();
-            }
-            unawaited(handleSyncFlow());
-            if (!context.mounted) {
-              return;
-            }
-
-            unawaited(ref.read(featureMessageServiceProvider).markSeen());
-            unawaited(context.router.replaceAll([const TabShellRoute()]));
-            return;
-          }
+          await completeOAuthLogin(loginResponseDto);
         } catch (error, stack) {
           log.severe('Error logging in with OAuth: $error', stack);
 
@@ -475,6 +537,34 @@ class LoginForm extends HookConsumerWidget {
       );
     }
 
+    // Default screen: the buttons over the welcome design drawn by LoginPage. The subdomain form
+    // is a hidden fallback (long-press the login button).
+    if (!manual) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ImmichTextButton(
+            labelText: context.t.login_form_login_with_pixelunion,
+            icon: Icons.login_rounded,
+            onPressed: portalLogin,
+            onLongPress: onShowManual,
+          ),
+          const SizedBox(height: 10),
+          ImmichTextButton(
+            labelText: context.t.login_form_create_environment,
+            variant: ImmichVariant.ghost,
+            onPressed: () async {
+              final uri = Uri.parse(_registerUrl);
+              if (await canLaunchUrl(uri)) {
+                unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+              }
+            },
+          ),
+        ],
+      );
+    }
+
     final serverSelectionOrLogin = serverEndpoint.value == null
         ? Padding(
             padding: const EdgeInsets.only(top: ImmichSpacing.md),
@@ -521,6 +611,12 @@ class LoginForm extends HookConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+                ImmichTextButton(
+                  labelText: context.t.back,
+                  icon: Icons.arrow_back,
+                  variant: ImmichVariant.ghost,
+                  onPressed: onExitManual,
                 ),
                 const SizedBox(height: 200),
                 ImmichTextButton(
