@@ -159,15 +159,10 @@ describe('PixelUnion fork invariants', () => {
   });
 
   describe('web branding', () => {
-    // Known violations that predate this check. Remove entries as they are fixed; never add new ones.
-    // - OnboardingHello.svelte: the onboarding wizard is slated for removal (change group 17).
-    const allowlist = new Set(['web/src/routes/auth/onboarding/OnboardingHello.svelte']);
-
     it('does not import the Immich Logo component', () => {
       const offenders = walk(join(repoRoot, 'web', 'src'), ['.svelte', '.ts'])
         .filter((file) => /import\s*\{[^}]*\bLogo\b[^}]*\}\s*from\s*'@immich\/ui'/.test(readFileSync(file, 'utf8')))
-        .map((file) => relative(repoRoot, file))
-        .filter((file) => !allowlist.has(file));
+        .map((file) => relative(repoRoot, file));
 
       expect(offenders).toEqual([]);
     });
