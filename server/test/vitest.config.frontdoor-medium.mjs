@@ -1,7 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import swc from 'unplugin-swc';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
 const serverRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,17 +17,22 @@ const frontdoorTest = resolve(serverRoot, '../packages/frontdoor/test');
 // `--dir` cannot move, so the include glob and the dir never intersect and
 // vitest exits 1 with "No test files found".
 export default defineConfig({
+  resolve: {
+    // The specs live outside the server, so the server's tsconfig paths do not
+    // cover them (frontdoor's own tsconfig excludes test/medium). Map `src/*` and
+    // `test/*` explicitly; tsconfigPaths still handles the server's own files.
+    alias: [
+      { find: /^src(?=\/)/, replacement: resolve(serverRoot, 'src') },
+      { find: /^test(?=\/)/, replacement: resolve(serverRoot, 'test') },
+    ],
+    tsconfigPaths: true,
+  },
   test: {
     name: 'frontdoor:medium',
     root: serverRoot,
     globals: true,
     include: [resolve(frontdoorTest, 'medium/**/*.spec.ts')],
     globalSetup: [resolve(serverRoot, 'test/medium/globalSetup.ts')],
-    server: {
-      deps: {
-        fallbackCJS: true,
-      },
-    },
   },
-  plugins: [swc.vite(), tsconfigPaths()],
+  plugins: [swc.vite()],
 });
