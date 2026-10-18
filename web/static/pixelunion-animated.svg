@@ -73,13 +73,13 @@
     </circle>
 
     <circle r="33" fill="#003399">
-      <animateMotion dur="5s" repeatCount="indefinite" rotate="0" calcMode="linear" begin="-1.67s">
+      <animateMotion dur="5s" repeatCount="indefinite" rotate="0" calcMode="linear" begin="-1.67s" keyPoints="0;1" keyTimes="0;1">
         <mpath xlink:href="#orbitB"/>
       </animateMotion>
     </circle>
 
     <circle r="33" fill="#003399">
-      <animateMotion dur="5s" repeatCount="indefinite" rotate="0" calcMode="linear" begin="-3.33s">
+      <animateMotion dur="5s" repeatCount="indefinite" rotate="0" calcMode="linear" begin="-3.33s" keyPoints="0;1" keyTimes="0;1">
         <mpath xlink:href="#orbitC"/>
       </animateMotion>
     </circle>

@@ -14,10 +14,10 @@
 
 <section class="relative isolate flex min-h-dvh min-w-dvw items-center justify-center">
   {#if withBackdrop}
-    <div class="absolute -z-10 flex size-full place-content-center place-items-center">
+    <div class="absolute -z-10 flex size-full place-content-center place-items-center overflow-hidden">
       <img
         src="/pixelunion.svg"
-        class="mx-auto mb-2 h-full max-w-(--breakpoint-md) overflow-hidden antialiased"
+        class="mx-auto mb-2 size-full max-w-none object-contain antialiased"
         alt="Immich logo"
       />
 

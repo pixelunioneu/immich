@@ -58,12 +58,6 @@
         }
       }
 
-      @keyframes loadspin {
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
       #stencil {
         --stencil-width: 150px;
         display: flex;
@@ -76,9 +70,7 @@
         justify-content: center;
         overflow: hidden;
         visibility: hidden;
-        animation:
-          0s linear 0.3s forwards delayedVisibility,
-          loadspin 8s linear infinite;
+        animation: 0s linear 0.3s forwards delayedVisibility;
       }
 
       .bg-immich-bg {
