@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigRepository } from 'src/repositories/config.repository';
-import { CryptoRepository } from 'src/repositories/crypto.repository';
-import { LoggingRepository } from 'src/repositories/logging.repository';
-import { OAuthRepository } from 'src/repositories/oauth.repository';
-import { PixelUnionSessionTokenRepository } from 'src/repositories/pixelunion-session-token.repository';
-import { SystemMetadataRepository } from 'src/repositories/system-metadata.repository';
-import { getConfig } from 'src/utils/config';
+import { ConfigRepository } from 'src/repositories/config.repository.js';
+import { CryptoRepository } from 'src/repositories/crypto.repository.js';
+import { LoggingRepository } from 'src/repositories/logging.repository.js';
+import { OAuthRepository } from 'src/repositories/oauth.repository.js';
+import { PixelUnionSessionTokenRepository } from 'src/repositories/pixelunion-session-token.repository.js';
+import { SystemMetadataRepository } from 'src/repositories/system-metadata.repository.js';
+import { getConfig } from 'src/utils/config.js';
 
 export type OidcTokenResult = { accessToken: string; reauth?: never } | { reauth: true; accessToken?: never };
 

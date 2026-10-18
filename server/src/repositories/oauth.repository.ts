@@ -1,24 +1,24 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { createRemoteJWKSet, jwtVerify, JWTVerifyGetKey } from 'jose';
+import { JWTVerifyGetKey, createRemoteJWKSet, jwtVerify } from 'jose';
 import {
+  ClientSecretBasic,
+  ClientSecretPost,
+  None,
+  type UserInfoResponse,
   allowInsecureRequests as allowInsecureRequestsExecute,
   authorizationCodeGrant,
   buildAuthorizationUrl,
   calculatePKCECodeChallenge,
-  ClientSecretBasic,
-  ClientSecretPost,
   discovery,
   fetchUserInfo,
-  None,
   randomPKCECodeVerifier,
   randomState,
   refreshTokenGrant,
   skipSubjectCheck,
   tokenRevocation,
-  type UserInfoResponse,
 } from 'openid-client';
-import { OAuthTokenEndpointAuthMethod } from 'src/enum';
-import { LoggingRepository } from 'src/repositories/logging.repository';
+import { OAuthTokenEndpointAuthMethod } from 'src/enum.js';
+import { LoggingRepository } from 'src/repositories/logging.repository.js';
 
 export type OAuthConfig = {
   clientId: string;

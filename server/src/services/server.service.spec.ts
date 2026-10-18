@@ -1,9 +1,9 @@
-import { defaults } from 'src/dtos/config.dto';
-import { SystemMetadataKey } from 'src/enum';
-import { ServerService } from 'src/services/server.service';
-import { mockEnvData } from 'test/repositories/config.repository.mock';
-import { newTestService, ServiceMocks } from 'test/utils';
 import { vi } from 'vitest';
+import { defaults } from 'src/dtos/config.dto.js';
+import { SystemMetadataKey } from 'src/enum.js';
+import { ServerService } from 'src/services/server.service.js';
+import { mockEnvData } from 'test/repositories/config.repository.mock.js';
+import { ServiceMocks, newTestService } from 'test/utils.js';
 
 describe(ServerService.name, () => {
   let sut: ServerService;

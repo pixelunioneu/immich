@@ -4,6 +4,7 @@
       ".avif",
       ".bmp",
       ".gif",
+      ".jfif",
       ".jpeg",
       ".jpg",
       ".png",
@@ -89,8 +90,11 @@
     "AssetMetadataV1",
     "AssetOcrV1",
     "AuthUsersV1",
+    "AuthUsersV2",
     "MemoriesV1",
+    "MemoriesV2",
     "MemoryToAssetsV1",
+    "MemoryToAssetsV2",
     "PartnersV1",
     "PartnerAssetsV1",
     "PartnerAssetsV2",
@@ -101,6 +105,7 @@
     "PeopleV1",
     "AssetFacesV1",
     "AssetFacesV2",
+    "AssetFacesV3",
     "UserMetadataV1"
   ]
 }

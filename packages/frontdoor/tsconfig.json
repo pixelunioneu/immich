@@ -22,6 +22,7 @@
       // shims only swap runtime behaviour; their real modules are typechecked as-is,
       // which is why the NestJS packages appear as devDependencies.
       "src/services/base.service": ["./src/shims/base.service.ts"],
+      "src/services/base.service.js": ["./src/shims/base.service.ts"],
       // The medium specs use the server's test harness the same way.
       "test/*": ["../../server/test/*"]
     },

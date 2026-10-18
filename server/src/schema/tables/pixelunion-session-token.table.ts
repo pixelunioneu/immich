@@ -2,13 +2,13 @@ import {
   Column,
   CreateDateColumn,
   ForeignKeyColumn,
-  Generated,
+  type Generated,
   Table,
-  Timestamp,
+  type Timestamp,
   UpdateDateColumn,
 } from '@immich/sql-tools';
-import { UpdatedAtTrigger, UpdateIdColumn } from 'src/decorators';
-import { SessionTable } from 'src/schema/tables/session.table';
+import { UpdateIdColumn, UpdatedAtTrigger } from 'src/decorators.js';
+import { SessionTable } from 'src/schema/tables/session.table.js';
 
 @Table('pixelunion_session_token')
 @UpdatedAtTrigger('pixelunion_session_token_updatedAt')

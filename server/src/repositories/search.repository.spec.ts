@@ -1,9 +1,9 @@
 import { Kysely } from 'kysely';
-import { ConfigRepository } from 'src/repositories/config.repository';
-import { PuApiRepository } from 'src/repositories/pu-api.repository';
-import { SearchRepository } from 'src/repositories/search.repository';
-import { DB } from 'src/schema';
 import { vitest } from 'vitest';
+import { ConfigRepository } from 'src/repositories/config.repository.js';
+import { PuApiRepository } from 'src/repositories/pu-api.repository.js';
+import { SearchRepository } from 'src/repositories/search.repository.js';
+import { DB } from 'src/schema/index.js';
 
 describe(SearchRepository.name, () => {
   const logger = { setContext: vitest.fn() };

@@ -1,5 +1,5 @@
 import { Command, CommandRunner } from 'nest-commander';
-import { DatabaseService } from 'src/services/database.service';
+import { DatabaseService } from 'src/services/database.service.js';
 
 @Command({
   name: 'db-migrate',

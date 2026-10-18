@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
-import { ConfigRepository } from 'src/repositories/config.repository';
-import { LoggingRepository } from 'src/repositories/logging.repository';
+import { ConfigRepository } from 'src/repositories/config.repository.js';
+import { LoggingRepository } from 'src/repositories/logging.repository.js';
 
 @Injectable()
 export class PuApiRepository {

@@ -18,8 +18,11 @@ export default defineConfig({
       // framework edges are not: the NestJS decorators, the DI markers and the
       // god-object BaseService are replaced with shims that keep the class shapes
       // and drop the framework. See src/shims/*.ts.
-      ...Object.entries(shims).map(([find, file]) => ({
-        find,
+      // Server sources import these with an ESM `.js` suffix, so match both spellings.
+      ...Object.entries(shims).map(([specifier, file]) => ({
+        find: new RegExp(
+          `^${specifier.replaceAll('.', String.raw`\.`)}(\\.js)?$`,
+        ),
         replacement: fileURLToPath(
           new URL(`./src/shims/${file}`, import.meta.url),
         ),

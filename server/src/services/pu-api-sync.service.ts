@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { OnEvent } from 'src/decorators';
-import { PuApiRepository } from 'src/repositories/pu-api.repository';
+import { OnEvent } from 'src/decorators.js';
+import { PuApiRepository } from 'src/repositories/pu-api.repository.js';
 
 @Injectable()
 export class PuApiSyncService {

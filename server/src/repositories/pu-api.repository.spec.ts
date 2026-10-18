@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { ConfigRepository } from 'src/repositories/config.repository';
-import { PuApiRepository } from 'src/repositories/pu-api.repository';
 import { Mocked, vitest } from 'vitest';
+import { ConfigRepository } from 'src/repositories/config.repository.js';
+import { PuApiRepository } from 'src/repositories/pu-api.repository.js';
 
 vitest.mock('node:fs/promises', () => ({
   readFile: vitest.fn(),

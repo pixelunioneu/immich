@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import { DB } from 'src/schema';
-import { asUuid } from 'src/utils/database';
+import { DB } from 'src/schema/index.js';
+import { asUuid } from 'src/utils/database.js';
 
 @Injectable()
 export class PixelUnionSessionTokenRepository {

@@ -1,10 +1,10 @@
 import { Kysely } from 'kysely';
-import { ConfigRepository } from 'src/repositories/config.repository';
-import { MapRepository } from 'src/repositories/map.repository';
-import { PuApiRepository } from 'src/repositories/pu-api.repository';
-import { SystemMetadataRepository } from 'src/repositories/system-metadata.repository';
-import { DB } from 'src/schema';
 import { vitest } from 'vitest';
+import { ConfigRepository } from 'src/repositories/config.repository.js';
+import { MapRepository } from 'src/repositories/map.repository.js';
+import { PuApiRepository } from 'src/repositories/pu-api.repository.js';
+import { SystemMetadataRepository } from 'src/repositories/system-metadata.repository.js';
+import { DB } from 'src/schema/index.js';
 
 describe(MapRepository.name, () => {
   const logger = {

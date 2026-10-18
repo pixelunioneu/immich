@@ -1,6 +1,6 @@
-import { PuApiRepository } from 'src/repositories/pu-api.repository';
-import { PuApiSyncService } from 'src/services/pu-api-sync.service';
 import { vitest } from 'vitest';
+import { PuApiRepository } from 'src/repositories/pu-api.repository.js';
+import { PuApiSyncService } from 'src/services/pu-api-sync.service.js';
 
 describe(PuApiSyncService.name, () => {
   it('should sync for all user lifecycle event handlers', async () => {

@@ -21,7 +21,7 @@
   "dependencies": {
     "@immich/plugin-sdk": "workspace:*",
     "@sentry/node": "^10.74.0",
-    "kysely": "0.28.17",
+    "kysely": "^0.29.5",
     "luxon": "^3.4.2",
     "pg": "^8.11.3",
     "pg-cursor": "^2.15.3",
