@@ -1,6 +1,5 @@
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { DateTime } from 'luxon';
-import { vitest } from 'vitest';
 import type { UserMetadataItem } from 'src/types.js';
 import { SALT_ROUNDS } from 'src/constants.js';
 import { UserAdmin } from 'src/database.js';
@@ -38,13 +37,6 @@ describe(AuthService.name, () => {
 
   beforeEach(() => {
     ({ sut, mocks } = newTestService(AuthService));
-
-    // PixelUnion: property-injected, so newTestService does not wire it.
-    (sut as unknown as { pixelUnionAuthService: unknown }).pixelUnionAuthService = {
-      revokeStoredToken: vitest.fn().mockResolvedValue(undefined),
-      storeRefreshToken: vitest.fn().mockResolvedValue(undefined),
-      getOidcToken: vitest.fn().mockResolvedValue({ accessToken: 'access-token' }),
-    };
 
     mocks.oauth.authorize.mockResolvedValue({ url: 'http://test', state: 'state', codeVerifier: 'codeVerifier' });
     mocks.oauth.getLogoutEndpoint.mockResolvedValue('http://end-session-endpoint');

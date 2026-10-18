@@ -1,8 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
+import { vi } from 'vitest';
 import { AssetFile } from 'src/database.js';
 import { AssetMediaStatus } from 'src/dtos/asset-media-response.dto.js';
 import { AssetMediaCreateDto } from 'src/dtos/asset-media.dto.js';
 import { MapAsset } from 'src/dtos/asset-response.dto.js';
+import { defaults } from 'src/dtos/config.dto.js';
 import { AssetType, JobName } from 'src/enum.js';
 import { AssetMediaService } from 'src/services/asset-media.service.js';
 import { authStub } from 'test/fixtures/auth.stub.js';
@@ -91,5 +93,56 @@ describe(`${AssetMediaService.name} (PixelUnion disk space guard)`, () => {
     mocks.storage.checkDiskUsage.mockResolvedValue({ available: 999, free: 999, total: 10_000 });
 
     await expect(sut.uploadAsset(authStub.user1, createDto, file)).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+// PixelUnion: server-wide upload quota (server.uploadQuotaGb), on top of the per-user quota.
+describe(`${AssetMediaService.name} (PixelUnion server-wide quota)`, () => {
+  let sut: AssetMediaService;
+  let mocks: ServiceMocks;
+
+  beforeEach(() => {
+    ({ sut, mocks } = newTestService(AssetMediaService));
+  });
+
+  it('should throw an error if the server quota is exceeded', async () => {
+    mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
+    vi.spyOn(sut, 'getConfig').mockResolvedValue({
+      ...defaults,
+      server: {
+        ...defaults.server,
+        uploadQuotaGb: 1,
+      },
+    });
+    mocks.user.getQuotaUsage.mockResolvedValue(1_073_741_800);
+
+    await expect(sut.uploadAsset(authStub.user1, createDto, file)).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(mocks.user.getQuotaUsage).toHaveBeenCalled();
+    expect(mocks.asset.create).not.toHaveBeenCalled();
+  });
+
+  it('should fall back to current behavior when no server quota is configured', async () => {
+    mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
+    vi.spyOn(sut, 'getConfig').mockResolvedValue(defaults);
+    mocks.asset.create.mockResolvedValue(assetEntity);
+
+    await expect(sut.uploadAsset(authStub.user1, createDto, file)).resolves.toEqual({
+      id: 'id_1',
+      status: AssetMediaStatus.CREATED,
+    });
+
+    expect(mocks.user.getQuotaUsage).not.toHaveBeenCalled();
+    expect(mocks.asset.create).toHaveBeenCalled();
+  });
+
+  it('should not apply the server quota without a config file', async () => {
+    const getConfig = vi.spyOn(sut, 'getConfig');
+    mocks.asset.create.mockResolvedValue(assetEntity);
+
+    await sut.uploadAsset(authStub.user1, createDto, file);
+
+    expect(getConfig).not.toHaveBeenCalled();
+    expect(mocks.user.getQuotaUsage).not.toHaveBeenCalled();
   });
 });

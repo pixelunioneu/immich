@@ -4,13 +4,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { vi } from 'vitest';
 import type { UploadBody } from 'src/types.js';
 import { AssetFile } from 'src/database.js';
 import { AssetMediaStatus, AssetRejectReason, AssetUploadAction } from 'src/dtos/asset-media-response.dto.js';
 import { AssetMediaCreateDto, AssetMediaSize, UploadFieldName } from 'src/dtos/asset-media.dto.js';
 import { MapAsset } from 'src/dtos/asset-response.dto.js';
-import { defaults } from 'src/dtos/config.dto.js';
 import { AssetEditAction } from 'src/dtos/editing.dto.js';
 import { AssetFileType, AssetType, AssetVisibility, CacheControl, JobName } from 'src/enum.js';
 import { AuthRequest } from 'src/middleware/auth.guard.js';
@@ -24,7 +22,6 @@ import { authStub } from 'test/fixtures/auth.stub.js';
 import { fileStub } from 'test/fixtures/file.stub.js';
 import { userStub } from 'test/fixtures/user.stub.js';
 import { getForAsset } from 'test/mappers.js';
-import { mockEnvData } from 'test/repositories/config.repository.mock.js';
 import { ServiceMocks, newTestService } from 'test/utils.js';
 
 const file1 = Buffer.from('d2947b871a706081be194569951b7db246907957', 'hex');
@@ -300,53 +297,6 @@ describe(AssetMediaService.name, () => {
   });
 
   describe('uploadAsset', () => {
-    it('should throw an error if the server quota is exceeded', async () => {
-      const file = {
-        uuid: 'random-uuid',
-        originalPath: 'fake_path/asset_1.jpeg',
-        mimeType: 'image/jpeg',
-        checksum: Buffer.from('file hash', 'utf8'),
-        originalName: 'asset_1.jpeg',
-        size: 42,
-      };
-      mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
-      vi.spyOn(sut, 'getConfig').mockResolvedValue({
-        ...defaults,
-        server: {
-          ...defaults.server,
-          uploadQuotaGb: 1,
-        },
-      });
-      mocks.user.getQuotaUsage.mockResolvedValue(1_073_741_800);
-
-      await expect(sut.uploadAsset(authStub.user1, createDto, file)).rejects.toBeInstanceOf(BadRequestException);
-
-      expect(mocks.user.getQuotaUsage).toHaveBeenCalled();
-      expect(mocks.asset.create).not.toHaveBeenCalled();
-    });
-
-    it('should fall back to current behavior when no server quota is configured', async () => {
-      const file = {
-        uuid: 'random-uuid',
-        originalPath: 'fake_path/asset_1.jpeg',
-        mimeType: 'image/jpeg',
-        checksum: Buffer.from('file hash', 'utf8'),
-        originalName: 'asset_1.jpeg',
-        size: 42,
-      };
-      mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
-      vi.spyOn(sut, 'getConfig').mockResolvedValue(defaults);
-      mocks.asset.create.mockResolvedValue(assetEntity);
-
-      await expect(sut.uploadAsset(authStub.user1, createDto, file)).resolves.toEqual({
-        id: 'id_1',
-        status: AssetMediaStatus.CREATED,
-      });
-
-      expect(mocks.user.getQuotaUsage).not.toHaveBeenCalled();
-      expect(mocks.asset.create).toHaveBeenCalled();
-    });
-
     it('should throw an error if the quota is exceeded', async () => {
       const file = {
         uuid: 'random-uuid',
