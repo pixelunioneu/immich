@@ -19,14 +19,34 @@ const key = (name: string, labels: Labels) => {
 const escape = (value: string) =>
   value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n');
 
+type Summary = { sum: number; count: number };
+type Histogram = Summary & { labels: Labels; counts: number[] };
+
 export class Metrics {
   private counters = new Map<string, number>();
   private gauges = new Map<string, number>();
-  private histograms = new Map<string, { sum: number; count: number }>();
+  private summaries = new Map<string, Summary>();
+  private histograms = new Map<string, Histogram>();
+  /** Upper bounds per histogram name; a name without one observes as a summary. */
+  private buckets = new Map<string, number[]>();
   private help = new Map<string, { type: string; text: string }>();
 
-  describe(name: string, type: 'counter' | 'gauge' | 'summary', text: string) {
+  describe(
+    name: string,
+    type: 'counter' | 'gauge' | 'summary' | 'histogram',
+    text: string,
+    buckets?: number[],
+  ) {
     this.help.set(name, { type, text });
+    if (type === 'histogram') {
+      if (!buckets?.length) {
+        throw new Error(`histogram ${name} needs buckets`);
+      }
+      this.buckets.set(
+        name,
+        [...buckets].sort((a, b) => a - b),
+      );
+    }
   }
 
   increment(name: string, labels: Labels = {}, by = 1) {
@@ -38,11 +58,29 @@ export class Metrics {
     this.gauges.set(key(name, labels), value);
   }
 
-  observe(name: string, seconds: number, labels: Labels = {}) {
+  observe(name: string, value: number, labels: Labels = {}) {
     const id = key(name, labels);
-    const current = this.histograms.get(id) ?? { sum: 0, count: 0 };
-    this.histograms.set(id, {
-      sum: current.sum + seconds,
+    const buckets = this.buckets.get(name);
+    if (buckets) {
+      const current = this.histograms.get(id) ?? {
+        labels,
+        counts: buckets.map(() => 0),
+        sum: 0,
+        count: 0,
+      };
+      for (const [index, bound] of buckets.entries()) {
+        if (value <= bound) {
+          current.counts[index] = (current.counts[index] ?? 0) + 1;
+        }
+      }
+      current.sum += value;
+      current.count += 1;
+      this.histograms.set(id, current);
+      return;
+    }
+    const current = this.summaries.get(id) ?? { sum: 0, count: 0 };
+    this.summaries.set(id, {
+      sum: current.sum + value,
       count: current.count + 1,
     });
   }
@@ -74,10 +112,29 @@ export class Metrics {
       header(id);
       lines.push(`${id} ${value}`);
     }
-    for (const [id, { sum, count }] of [...this.histograms].sort()) {
+    for (const [id, { sum, count }] of [...this.summaries].sort()) {
       header(id);
       const [name, rest] = splitId(id);
       lines.push(`${name}_sum${rest} ${sum}`, `${name}_count${rest} ${count}`);
+    }
+    for (const [id, { labels, counts, sum, count }] of [
+      ...this.histograms,
+    ].sort()) {
+      header(id);
+      const [name, rest] = splitId(id);
+      const bounds = this.buckets.get(name) ?? [];
+      // Buckets are cumulative, as the exposition format requires, and already
+      // counted that way above. `+Inf` is every observation.
+      for (const [index, bound] of bounds.entries()) {
+        lines.push(
+          `${key(`${name}_bucket`, { ...labels, le: String(bound) })} ${counts[index] ?? 0}`,
+        );
+      }
+      lines.push(
+        `${key(`${name}_bucket`, { ...labels, le: '+Inf' })} ${count}`,
+        `${name}_sum${rest} ${sum}`,
+        `${name}_count${rest} ${count}`,
+      );
     }
 
     return lines.join('\n') + '\n';
@@ -132,7 +189,18 @@ metrics.describe(
   'sync/stream dry runs, by verdict and, for busy, why.',
 );
 metrics.describe(
-  'frontdoor_proxy_latency_seconds',
+  'frontdoor_stream_types_total',
+  'counter',
+  'Entity types a sync/stream dry run produced, by type and verdict; once per distinct type per request.',
+);
+metrics.describe(
+  'frontdoor_stream_served_bytes',
   'summary',
-  'Time spent relaying a request to the tenant, by outcome.',
+  'Size of the sync/stream bodies this service answered, in bytes.',
+);
+metrics.describe(
+  'frontdoor_proxy_latency_seconds',
+  'histogram',
+  'Time spent relaying a request to the tenant, by outcome. Under a second or so the tenant was warm; longer, it was woken.',
+  [0.1, 0.5, 1, 2, 5, 10, 30, 60],
 );

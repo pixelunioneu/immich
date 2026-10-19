@@ -51,13 +51,20 @@ const SYNC_STREAM = '/api/sync/stream';
 /** Paths that never reach the app logic and would just be noise in the access log. */
 const UNLOGGED_PATHS = new Set(['/healthz', '/metrics']);
 
-type AccessContext = { tenant?: string };
+type AccessContext = {
+  tenant?: string;
+  /** For sync/stream: the verdict, or how the request was relayed without one. */
+  stream?: string;
+};
 
 /**
  * One line per request, to stdout, for the operator to correlate a tenant with
  * the traffic this service answered on its behalf. Deliberately logs only the
  * path, not the full URL: Immich accepts `?apiKey=` on requests, and the query
  * string is not something this line should ever be able to leak.
+ *
+ * sync/stream lines carry `stream=<verdict>` so a wake can be attributed to a
+ * relay from these logs alone.
  */
 const logAccess = (
   req: IncomingMessage,
@@ -72,8 +79,9 @@ const logAccess = (
   const duration = (performance.now() - start).toFixed(2);
   const method = req.method ?? 'GET';
   const tenant = access.tenant ?? '-';
+  const stream = access.stream === undefined ? '' : ` stream=${access.stream}`;
   console.log(
-    `${method} ${path} ${res.statusCode} ${duration}ms tenant=${tenant}`,
+    `${method} ${path} ${res.statusCode} ${duration}ms tenant=${tenant}${stream}`,
   );
 };
 
@@ -125,7 +133,7 @@ export const createApp = (
     }
 
     if (path === SYNC_STREAM) {
-      return handleStream(req, res, url);
+      return handleStream(req, res, url, access);
     }
 
     if (path !== SYNC_ACK) {
@@ -185,15 +193,17 @@ export const createApp = (
   };
 
   /**
-   * Phase 2. Answered only when the tenant's stream would be empty; relayed to
-   * the tenant otherwise. Every failure on the way to a verdict is a relay, not
-   * an error: wrongly waking a pod is harmless, wrongly answering "empty" is a
-   * client that never sees a change.
+   * Phase 2. Answered when the tenant's stream would complete without a write
+   * and stays under the size cap; relayed to the tenant otherwise. Every
+   * failure on the way to a verdict is a relay, not an error: wrongly waking a
+   * pod is harmless, wrongly serving a stream is a client that never sees a
+   * change.
    */
   const handleStream = async (
     req: IncomingMessage,
     res: ServerResponse,
     url: URL,
+    access: AccessContext,
   ) => {
     const endpoint = 'sync-stream';
     if (req.method !== 'POST') {
@@ -206,6 +216,7 @@ export const createApp = (
 
     const raw = await readBody(req);
     const relay = async () => {
+      access.stream ??= 'relay';
       metrics.increment('frontdoor_requests_total', {
         endpoint,
         outcome: 'proxied',
@@ -220,6 +231,7 @@ export const createApp = (
     };
 
     if (config.stream.mode === 'proxy') {
+      access.stream = 'proxy';
       return relay();
     }
 
@@ -253,6 +265,7 @@ export const createApp = (
           session,
           body,
           config.stream.decideTimeoutMs,
+          config.stream.serveMaxBytes,
         );
       });
     } catch (error) {
@@ -261,6 +274,7 @@ export const createApp = (
       // answer: it is what happens today, and it is not this service's
       // outage to report.
       if (error instanceof TenantDatabaseUnavailable) {
+        access.stream = 'busy';
         metrics.increment('frontdoor_stream_decisions_total', {
           verdict: 'busy',
           reason: 'db_unavailable',
@@ -271,30 +285,41 @@ export const createApp = (
     }
 
     if (!verdict || verdict.kind === 'refused') {
+      access.stream = 'refused';
       return;
     }
 
+    access.stream = verdict.kind;
     metrics.increment('frontdoor_stream_decisions_total', {
       verdict: verdict.kind,
       reason: verdict.kind === 'busy' ? verdict.reason : '',
     });
+    // Which entity types make up the streams, served and relayed alike. Bounded
+    // by the contract's entity types.
+    if (verdict.kind !== 'reset') {
+      for (const type of verdict.types) {
+        metrics.increment('frontdoor_stream_types_total', {
+          type,
+          verdict: verdict.kind,
+        });
+      }
+    }
 
     switch (verdict.kind) {
-      case 'empty': {
+      case 'empty':
+      case 'served': {
         metrics.increment('frontdoor_requests_total', {
           endpoint,
           outcome: 'answered',
         });
         metrics.increment('frontdoor_wakes_avoided_total');
-        return sendJsonLines(
-          res,
-          200,
-          serialize({
-            type: SyncEntityType.SyncCompleteV1,
-            ids: [verdict.nowId],
-            data: {},
-          }),
+        metrics.observe(
+          'frontdoor_stream_served_bytes',
+          Buffer.byteLength(verdict.body),
         );
+        // The server's own bytes, captured by the dry run: entity lines, if
+        // any, then the terminating line.
+        return sendJsonLines(res, 200, verdict.body);
       }
       case 'reset': {
         metrics.increment('frontdoor_requests_total', {

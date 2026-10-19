@@ -2,31 +2,36 @@ import { Writable } from 'node:stream';
 import type { Kysely } from 'kysely';
 import type { DB } from 'src/schema';
 import { HttpException } from '@nestjs/common';
-import { fromAck } from 'src/utils/sync';
 import contract from '../generated/contract.json' with { type: 'json' };
 import { Busy, syncService } from '../sync-service.js';
 import { type SessionAuth, toAuthDto } from './auth-dto.js';
 
 /**
  * Decides whether a `sync/stream` request can be answered without the tenant's
- * own instance: only when the stream would contain nothing but its terminating
- * line, or a single reset line.
+ * own instance: when the stream would be a single reset line, or when it
+ * completes without the server writing anything and stays under a byte cap.
  *
  * The decision is made by running the server's real `SyncService.stream()` against
  * a sentinel writable inside a read-only transaction that is always rolled back.
- * The first line the service would send settles it; any write it would make
- * settles it too. Nothing here knows how sync works, which is the point: an
- * upstream change to the stream changes this decision on the next merge.
+ * The sentinel keeps what the service writes, so a stream the tenant would have
+ * produced can be sent verbatim: same code, same database, same session. Any
+ * write the service attempts settles it the other way. Nothing here knows how
+ * sync works, which is the point: an upstream change to the stream changes this
+ * decision on the next merge.
  *
  * The failure modes are not symmetric. Wrongly answering "busy" wakes a pod for
- * nothing; wrongly answering "empty" means a client never learns about a change.
+ * nothing; wrongly serving a stream means a client never learns about a change.
  * So every error, timeout or doubt is "busy".
  */
 
 export type Verdict =
-  | { kind: 'empty'; nowId: string }
+  /** The stream is its terminating line and nothing else. */
+  | { kind: 'empty'; body: string; types: string[] }
+  /** A write-free stream under the cap: entity lines plus the terminating line. */
+  | { kind: 'served'; body: string; types: string[] }
   | { kind: 'reset' }
-  | { kind: 'busy'; reason: string };
+  /** Relay. `types` are the entity types seen before the dry run was cut short. */
+  | { kind: 'busy'; reason: string; types: string[] };
 
 export type StreamBody = { types: string[]; reset?: boolean };
 
@@ -42,27 +47,41 @@ class Rollback extends Error {}
 class Deadline extends Error {}
 
 /**
- * Receives what the server would have sent. The terminating line and a reset are
- * the only lines an answerable stream contains; anything else ends the dry run.
+ * Receives what the server would have sent and keeps it, line for line. Entity
+ * lines count against `maxBytes`; the terminating line does not, so a cap of 0
+ * answers empty streams and nothing else. A reset is remembered rather than
+ * kept: it is the whole answer. The first line that crosses the cap ends the dry
+ * run, so a large stream costs at most the cap plus one line.
  */
 class Sentinel extends Writable {
-  nowId?: string;
+  readonly lines: string[] = [];
+  readonly types = new Set<string>();
+  bytes = 0;
+  complete = false;
   reset = false;
 
+  constructor(private readonly maxBytes: number) {
+    super();
+  }
+
   override write(chunk: unknown): boolean {
-    const { type, ack } = JSON.parse(String(chunk)) as {
-      type: string;
-      ack: string;
-    };
-    if (type === COMPLETE) {
-      this.nowId = fromAck(ack).updateId;
-      return true;
-    }
+    const line = String(chunk);
+    const { type } = JSON.parse(line) as { type: string };
     if (type === RESET) {
       this.reset = true;
       return true;
     }
-    throw new Busy(type);
+    if (type === COMPLETE) {
+      this.complete = true;
+    } else {
+      this.types.add(type);
+      this.bytes += Buffer.byteLength(line);
+      if (this.bytes > this.maxBytes) {
+        throw new Busy('large');
+      }
+    }
+    this.lines.push(line);
+    return true;
   }
 
   override end(): this {
@@ -75,15 +94,21 @@ export const decide = async (
   auth: SessionAuth,
   body: StreamBody,
   deadlineMs: number,
+  maxBytes: number,
 ): Promise<Verdict> => {
   // The server's controller validates `types` before the service ever runs, and
   // the service skips anything it does not recognise. Without this check an
   // unknown type would look empty here where the tenant would answer 400.
   if (body.types.some((type) => !SYNC_REQUEST_TYPES.has(type))) {
-    return { kind: 'busy', reason: 'unknown_type' };
+    return { kind: 'busy', reason: 'unknown_type', types: [] };
   }
 
-  const sentinel = new Sentinel();
+  const sentinel = new Sentinel(maxBytes);
+  const busy = (reason: string): Verdict => ({
+    kind: 'busy',
+    reason,
+    types: [...sentinel.types],
+  });
 
   const dryRun = db
     .transaction()
@@ -105,31 +130,36 @@ export const decide = async (
   try {
     await Promise.race([dryRun, deadline]);
     // `execute` cannot resolve: the callback always throws.
-    return { kind: 'busy', reason: 'no_verdict' };
+    return busy('no_verdict');
   } catch (error) {
     if (error instanceof Rollback) {
       if (sentinel.reset) {
         return { kind: 'reset' };
       }
-      if (sentinel.nowId) {
-        return { kind: 'empty', nowId: sentinel.nowId };
+      if (!sentinel.complete) {
+        return busy('no_verdict');
       }
-      return { kind: 'busy', reason: 'no_verdict' };
+      // The lines are passed through as captured, not regenerated, so the body
+      // is the server's bytes end to end. The terminating line is the last one.
+      const body = sentinel.lines.join('');
+      return sentinel.types.size === 0
+        ? { kind: 'empty', body, types: [] }
+        : { kind: 'served', body, types: [...sentinel.types] };
     }
     if (error instanceof Busy) {
-      return { kind: 'busy', reason: error.reason };
+      return busy(error.reason);
     }
     if (error instanceof Deadline) {
       // The transaction keeps unwinding in the background under the pool's
       // statement timeout and rolls back when it does; observe its rejection so
       // it never surfaces as unhandled.
       dryRun.catch(() => undefined);
-      return { kind: 'busy', reason: 'timeout' };
+      return busy('timeout');
     }
     if (error instanceof HttpException) {
       // A deprecated type, or a body the server would refuse: let the tenant
       // produce the exact error.
-      return { kind: 'busy', reason: 'bad_request' };
+      return busy('bad_request');
     }
     throw error;
   } finally {

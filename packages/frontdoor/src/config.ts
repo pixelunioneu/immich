@@ -24,6 +24,19 @@ const number = (name: string, fallback: number): number => {
   return value;
 };
 
+/** Like `number`, but 0 is a value, not a mistake. */
+const nonNegative = (name: string, fallback: number): number => {
+  const raw = process.env[name];
+  if (raw === undefined) {
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative number, got: ${raw}`);
+  }
+  return value;
+};
+
 const oneOf = <T extends string>(
   name: string,
   allowed: readonly T[],
@@ -88,8 +101,9 @@ export const loadConfig = () => ({
   stream: {
     /**
      * `proxy` relays every sync/stream request to the tenant untouched. `serve`
-     * answers the ones that would be empty and relays the rest. Proxy is the
-     * default so a fresh deployment changes nothing until it is asked to.
+     * answers the ones the tenant could serve without writing anything, up to
+     * `serveMaxBytes`, and relays the rest. Proxy is the default so a fresh
+     * deployment changes nothing until it is asked to.
      */
     mode: oneOf('FRONTDOOR_STREAM_MODE', ['proxy', 'serve'] as const, 'proxy'),
     /**
@@ -99,6 +113,12 @@ export const loadConfig = () => ({
     upstreamUrl: new URL(required('FRONTDOOR_UPSTREAM_URL')),
     /** Longest a dry run may take before the request is relayed instead. */
     decideTimeoutMs: number('FRONTDOOR_STREAM_DECIDE_TIMEOUT_MS', 2000),
+    /**
+     * Largest stream the front door sends itself, in bytes of newline-delimited
+     * JSON before the terminating line. Anything larger is relayed. 0 answers
+     * only empty streams.
+     */
+    serveMaxBytes: nonNegative('FRONTDOOR_STREAM_SERVE_MAX_BYTES', 64 * 1024),
     /** Longest a relayed request may take; a cold tenant boots in seconds. */
     proxyTimeoutMs: number('FRONTDOOR_PROXY_TIMEOUT_MS', 60_000),
   },

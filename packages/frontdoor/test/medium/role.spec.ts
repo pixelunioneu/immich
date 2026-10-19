@@ -40,6 +40,8 @@ const ALL_TYPES = SYNC_TYPES_ORDER.filter(
     ].includes(type),
 );
 
+const MAX_BYTES = 64 * 1024;
+
 let harness: Kysely<DB>;
 
 /** The front door's own dialect, as in src/db.ts, on the harness database. */
@@ -76,20 +78,40 @@ describe('over pg with a cursor', () => {
     const db = await frontdoorDb('postgres', 'postgres');
     try {
       await wait(2);
-      // A fresh user is itself an unsynced row for AuthUsersV1; a type with
-      // nothing behind it is the empty case.
+      // A fresh user is itself an unsynced row for the user types, so every
+      // type at once is a small served stream; a type with nothing behind it
+      // is the empty case.
       await expect(
-        decide(db, session, { types: ALL_TYPES }, 10_000),
-      ).resolves.toEqual({ kind: 'busy', reason: 'AuthUserV1' });
+        decide(db, session, { types: ALL_TYPES }, 10_000, MAX_BYTES),
+      ).resolves.toMatchObject({
+        kind: 'served',
+        types: ['AuthUserV1', 'AuthUserV2', 'UserV1'],
+      });
       await expect(
-        decide(db, session, { types: [SyncRequestType.StacksV1] }, 10_000),
+        decide(
+          db,
+          session,
+          { types: [SyncRequestType.StacksV1] },
+          10_000,
+          MAX_BYTES,
+        ),
       ).resolves.toMatchObject({ kind: 'empty' });
 
       await ctx.newAsset({ ownerId: auth.user.id });
       await wait(2);
       await expect(
-        decide(db, session, { types: [SyncRequestType.AssetsV2] }, 10_000),
-      ).resolves.toEqual({ kind: 'busy', reason: 'AssetV2' });
+        decide(
+          db,
+          session,
+          { types: [SyncRequestType.AssetsV2] },
+          10_000,
+          MAX_BYTES,
+        ),
+      ).resolves.toMatchObject({ kind: 'served', types: ['AssetV2'] });
+      // The cap on the production driver: the cursor is closed mid-stream.
+      await expect(
+        decide(db, session, { types: [SyncRequestType.AssetsV2] }, 10_000, 0),
+      ).resolves.toEqual({ kind: 'busy', reason: 'large', types: ['AssetV2'] });
     } finally {
       await db.destroy();
     }
@@ -117,15 +139,25 @@ describe.skipIf(!GRANTS)('as the immich-frontdoor role', () => {
 
     const db = await frontdoorDb(ROLE, PASSWORD);
     try {
-      // Busy on the first type that has output; every query up to it ran as
-      // the role. Then per type, so each handler's queries are exercised.
+      // The partner share has no upsert checkpoint yet, so the server would
+      // write a backfill checkpoint there: busy, with every type before it
+      // read as the role. Then per type, so each handler's queries are
+      // exercised.
       await expect(
-        decide(db, session, { types: ALL_TYPES }, 10_000),
+        decide(db, session, { types: ALL_TYPES }, 10_000, MAX_BYTES),
       ).resolves.toMatchObject({
         kind: 'busy',
+        reason: 'write',
+        types: expect.arrayContaining(['AuthUserV2', 'UserV1', 'AssetV2']),
       });
       for (const type of ALL_TYPES) {
-        const verdict = await decide(db, session, { types: [type] }, 10_000);
+        const verdict = await decide(
+          db,
+          session,
+          { types: [type] },
+          10_000,
+          MAX_BYTES,
+        );
         expect(verdict, type).not.toMatchObject({ reason: 'db_error' });
       }
 
