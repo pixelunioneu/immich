@@ -63,8 +63,9 @@ type AccessContext = {
  * path, not the full URL: Immich accepts `?apiKey=` on requests, and the query
  * string is not something this line should ever be able to leak.
  *
- * sync/stream lines carry `stream=<verdict>` so a wake can be attributed to a
- * relay from these logs alone.
+ * sync/stream lines carry `stream=<verdict>`, with the reason for a busy one
+ * (`stream=busy:write`), so a wake can be attributed to a relay, and the relay
+ * to its cause, from these logs alone.
  */
 const logAccess = (
   req: IncomingMessage,
@@ -274,7 +275,7 @@ export const createApp = (
       // answer: it is what happens today, and it is not this service's
       // outage to report.
       if (error instanceof TenantDatabaseUnavailable) {
-        access.stream = 'busy';
+        access.stream = 'busy:db_unavailable';
         metrics.increment('frontdoor_stream_decisions_total', {
           verdict: 'busy',
           reason: 'db_unavailable',
@@ -289,7 +290,8 @@ export const createApp = (
       return;
     }
 
-    access.stream = verdict.kind;
+    access.stream =
+      verdict.kind === 'busy' ? `busy:${verdict.reason}` : verdict.kind;
     metrics.increment('frontdoor_stream_decisions_total', {
       verdict: verdict.kind,
       reason: verdict.kind === 'busy' ? verdict.reason : '',
@@ -319,7 +321,12 @@ export const createApp = (
         );
         // The server's own bytes, captured by the dry run: entity lines, if
         // any, then the terminating line.
-        return sendJsonLines(res, 200, verdict.body);
+        return sendJsonLines(
+          res,
+          200,
+          verdict.body,
+          req.headers['accept-encoding'],
+        );
       }
       case 'reset': {
         metrics.increment('frontdoor_requests_total', {
@@ -335,6 +342,7 @@ export const createApp = (
             ids: ['reset'],
             data: {},
           }),
+          req.headers['accept-encoding'],
         );
       }
       case 'busy': {

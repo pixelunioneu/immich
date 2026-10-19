@@ -12,27 +12,21 @@ const required = (name: string): string => {
   return value;
 };
 
-const number = (name: string, fallback: number): number => {
+/** A positive number unless `min` says otherwise; with `min: 0`, zero is a value. */
+const number = (
+  name: string,
+  fallback: number,
+  { min }: { min?: number } = {},
+): number => {
   const raw = process.env[name];
   if (raw === undefined) {
     return fallback;
   }
   const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`${name} must be a positive number, got: ${raw}`);
-  }
-  return value;
-};
-
-/** Like `number`, but 0 is a value, not a mistake. */
-const nonNegative = (name: string, fallback: number): number => {
-  const raw = process.env[name];
-  if (raw === undefined) {
-    return fallback;
-  }
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative number, got: ${raw}`);
+  const inRange = min === undefined ? value > 0 : value >= min;
+  if (!Number.isFinite(value) || !inRange) {
+    const bound = min === undefined ? 'a positive number' : `at least ${min}`;
+    throw new Error(`${name} must be ${bound}, got: ${raw}`);
   }
   return value;
 };
@@ -116,9 +110,11 @@ export const loadConfig = () => ({
     /**
      * Largest stream the front door sends itself, in bytes of newline-delimited
      * JSON before the terminating line. Anything larger is relayed. 0 answers
-     * only empty streams.
+     * only empty streams, and is the default for the same reason `proxy` is:
+     * a deployment already in `serve` mode changes nothing until it is asked
+     * to. 65536 is the value the rollout raises it to.
      */
-    serveMaxBytes: nonNegative('FRONTDOOR_STREAM_SERVE_MAX_BYTES', 64 * 1024),
+    serveMaxBytes: number('FRONTDOOR_STREAM_SERVE_MAX_BYTES', 0, { min: 0 }),
     /** Longest a relayed request may take; a cold tenant boots in seconds. */
     proxyTimeoutMs: number('FRONTDOOR_PROXY_TIMEOUT_MS', 60_000),
   },

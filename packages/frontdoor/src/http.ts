@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { gzipSync } from 'node:zlib';
 import { BadRequest } from './errors.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -60,17 +61,26 @@ export const parseJson = (body: Buffer | undefined): unknown => {
 export const readJsonBody = async (req: IncomingMessage): Promise<unknown> =>
   parseJson(await readBody(req));
 
-/** One newline-delimited JSON document, the way the server streams sync data. */
+/**
+ * One newline-delimited JSON document, the way the server streams sync data.
+ * Gzipped when the client accepts it, as the server's compression middleware
+ * would have done: these bodies go to phones on background data budgets.
+ */
 export const sendJsonLines = (
   res: ServerResponse,
   status: number,
   lines: string,
+  acceptEncoding?: string,
 ) => {
+  const gzip = /(^|,)\s*gzip\s*(;|,|$)/.test(acceptEncoding ?? '');
+  const body = gzip ? gzipSync(lines) : Buffer.from(lines);
   res.writeHead(status, {
     'content-type': 'application/jsonlines+json',
-    'content-length': Buffer.byteLength(lines),
+    'content-length': body.byteLength,
+    vary: 'accept-encoding',
+    ...(gzip ? { 'content-encoding': 'gzip' } : {}),
   });
-  res.end(lines);
+  res.end(body);
 };
 
 export const asStringArray = (value: unknown, field: string): string[] => {
