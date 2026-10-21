@@ -210,23 +210,9 @@ export class TenantPools {
     }
 
     const database = databaseForTenant(tenant, this.config.databasePrefix);
-    const { pool, db } = createDatabase({
-      // The database MUST be carried in the connection string, not passed
-      // alongside it. `pg` resolves the two with
-      // `Object.assign({}, config, parse(config.connectionString))`, so anything
-      // parsed out of the string overrides the explicit option - including the
-      // `database: null` it emits for a URL with no path. Passing both silently
-      // sends every tenant to the same database while leaving the tenant
-      // validation looking correct.
-      connectionString: connectionStringFor(this.config.databaseUrl, database),
-      min: 0,
-      max: this.config.pool.maxPerPool,
-      idleTimeoutMillis: this.config.pool.idleMs,
-      connectionTimeoutMillis: this.config.queryTimeoutMs * 4,
-      statement_timeout: this.config.queryTimeoutMs,
-      query_timeout: this.config.queryTimeoutMs,
-      application_name: 'immich-frontdoor',
-    });
+    const { pool, db } = createDatabase(
+      tenantPoolConfig(this.config, database),
+    );
 
     // A pool-level error must never take the process down: the tenant fails, not the fleet.
     pool.on('error', () => this.recordFailure(tenant));
@@ -323,20 +309,12 @@ export class TenantPools {
 }
 
 /**
- * pg and pg-pool raise some database failures as plain Errors with no `code`, so
- * these are recognised by message. Read as bugs they were 500s with a stack
- * trace, where a statement timeout (57014) on the same slow query is a 503, or
- * for sync/stream a relay.
- *
- * `Query read timeout` is the common one. It is pg's client-side `query_timeout`,
- * which races the server-side `statement_timeout` set to the same value and
- * usually wins, its clock having started first. For a cursor, which is how the
- * sync repository reads every stream, pg-cursor never reports completion to it,
- * so it runs from submission until the cursor closes: a dry run that reads one
- * stream for longer than the timeout fails this way, however fast each read is.
+ * pg and pg-pool raise some database failures as plain Errors with no `code`,
+ * so these are recognised by message: a connection that could not be had in
+ * time, and one lost under a query. Read as bugs they were 500s with a stack
+ * trace, where a statement timeout (57014) is a 503, or for sync/stream a relay.
  */
 const CODELESS_DRIVER_ERRORS = new Map([
-  ['Query read timeout', 'query_timeout'],
   ['timeout exceeded when trying to connect', 'connect_timeout'],
   ['Connection terminated due to connection timeout', 'connect_timeout'],
   ['Connection terminated unexpectedly', 'connection_lost'],
@@ -359,6 +337,41 @@ const driverReason = (error: unknown): string => {
   }
   return codelessReason(error) ?? 'query_failed';
 };
+
+/**
+ * The pool options for one tenant's database. Exported so the medium tests can
+ * build a pool exactly as production does.
+ */
+export const tenantPoolConfig = (
+  config: Config,
+  database: string,
+): pg.PoolConfig => ({
+  // The database MUST be carried in the connection string, not passed
+  // alongside it. `pg` resolves the two with
+  // `Object.assign({}, config, parse(config.connectionString))`, so anything
+  // parsed out of the string overrides the explicit option - including the
+  // `database: null` it emits for a URL with no path. Passing both silently
+  // sends every tenant to the same database while leaving the tenant
+  // validation looking correct.
+  connectionString: connectionStringFor(config.databaseUrl, database),
+  min: 0,
+  max: config.pool.maxPerPool,
+  idleTimeoutMillis: config.pool.idleMs,
+  connectionTimeoutMillis: config.queryTimeoutMs * 4,
+  // The query timeout is Postgres's, not pg's. pg's client-side `query_timeout`
+  // fails a cursor read with an Error that has no `code`, and if it fires while
+  // a cursor stream is paused between reads, the request hangs with its
+  // connection checked out for good. `statement_timeout` cancels the query in
+  // the database instead, and the next read fails with SQLSTATE 57014: an
+  // ordinary error, on which Kysely closes the cursor and releases the
+  // connection. For a cursor both clocks run from its first message to its last
+  // row, not per fetch, so a stream gets the same time either way. What this
+  // gives up is a bound on a database that stops answering altogether: a
+  // sync/stream request still relays at the decide deadline, a sync/ack
+  // request waits.
+  statement_timeout: config.queryTimeoutMs,
+  application_name: 'immich-frontdoor',
+});
 
 /**
  * Puts the database in the connection string's path.
