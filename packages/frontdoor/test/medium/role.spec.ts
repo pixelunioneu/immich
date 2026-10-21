@@ -1,7 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { Kysely, PostgresDialect, sql } from 'kysely';
-import pg from 'pg';
-import Cursor from 'pg-cursor';
+import { Kysely, sql } from 'kysely';
 import { SyncRequestType } from 'src/enum';
 import { DB } from 'src/schema';
 import { SYNC_TYPES_ORDER } from 'src/services/sync.service';
@@ -9,14 +7,16 @@ import { SyncTestContext } from 'test/medium.factory';
 import { getKyselyDB, wait } from 'test/utils';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { decide } from '../../src/handlers/sync-stream.js';
+import { frontdoorDb as connect } from './frontdoor-db.js';
 
 /**
- * Two things the equivalence tests cannot show, because they run on the
- * harness's superuser connection over postgres-js:
+ * Two things beside the equivalence tests, which run the front door's side on
+ * its own dialect but connect as the harness's superuser:
  *
- * 1. The production driver path. The front door talks `pg` with a cursor for
- *    the sync repository's streamed queries; this runs the decision over exactly
- *    that dialect.
+ * 1. The production driver path on its own. The front door talks `pg` with a
+ *    cursor for the sync repository's streamed queries; this runs the decision
+ *    over exactly that dialect, every type at once and with the cap closing a
+ *    cursor mid-stream.
  * 2. The production role. Given the SQL that grants the deployment's database
  *    role its privileges (path in `IMMICH_FRONTDOOR_GRANTS_SQL`), the decision
  *    runs as that role over every sync type and must not hit a single permission
@@ -44,22 +44,9 @@ const MAX_BYTES = 64 * 1024;
 
 let harness: Kysely<DB>;
 
-/** The front door's own dialect, as in src/db.ts, on the harness database. */
-const frontdoorDb = async (user: string, password: string) => {
-  const { current } = await sql<{
-    current: string;
-  }>`select current_database() as current`
-    .execute(harness)
-    .then((r) => r.rows[0]);
-  const url = new URL(process.env.IMMICH_TEST_POSTGRES_URL!);
-  url.username = encodeURIComponent(user);
-  url.password = encodeURIComponent(password);
-  url.pathname = `/${encodeURIComponent(current)}`;
-  const pool = new pg.Pool({ connectionString: url.toString(), max: 2 });
-  return new Kysely<DB>({
-    dialect: new PostgresDialect({ pool, cursor: Cursor }),
-  });
-};
+/** The front door's own dialect, from src/db.ts, on the harness database. */
+const frontdoorDb = (user: string, password: string) =>
+  connect(harness, user, password);
 
 beforeAll(async () => {
   harness = await getKyselyDB();

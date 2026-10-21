@@ -1,4 +1,10 @@
-import { Kysely, PostgresDialect, sql } from 'kysely';
+import {
+  Kysely,
+  PostgresDialect,
+  PostgresQueryCompiler,
+  sql,
+  type QueryCompiler,
+} from 'kysely';
 import pg from 'pg';
 import Cursor from 'pg-cursor';
 import type { DB } from 'src/schema';
@@ -6,6 +12,101 @@ import type { Config } from './config.js';
 import { FrontdoorError, TenantDatabaseUnavailable } from './errors.js';
 import { metrics } from './metrics.js';
 import { databaseForTenant } from './tenant.js';
+
+/**
+ * Rows have to come back exactly as the server's own driver returns them: a
+ * served sync/stream body is the server's serializer run on these rows, so a
+ * value parsed differently is a different body. The server runs Kysely on
+ * postgres.js through `createPostgres` from @immich/sql-tools, which parses int8
+ * and numeric with `Number.parseInt` and date, timestamp and timestamptz with
+ * `new Date`, and opens every session with TimeZone=UTC and DateStyle=ISO.
+ * pg's defaults differ: int8 and numeric arrive as strings (a quota in bytes
+ * sent as `"123"` is a null-check crash in the mobile client's generated
+ * model), and a date becomes midnight in this process's time zone. Parameters
+ * differ too; see {@link ServerQueryCompiler}.
+ *
+ * The other types the sync repository selects already agree between the two
+ * drivers: int2, int4, float4 and float8 as numbers, bool, bytea as a Buffer,
+ * json and jsonb parsed, uuid, text and enums as strings. Arrays would not:
+ * postgres.js parses every array type, pg only its built-in ones and with its
+ * own element parsers. No column the sync repository selects is an array.
+ *
+ * The parsers are scoped to these pools rather than registered on pg's global
+ * types, so nothing else in the process reads rows differently because of them.
+ */
+const { builtins } = pg.types;
+const serverTypes = new pg.TypeOverrides();
+for (const oid of [builtins.INT8, builtins.NUMERIC]) {
+  serverTypes.setTypeParser(oid, 'text', (value) => Number.parseInt(value));
+}
+for (const oid of [builtins.DATE, builtins.TIMESTAMP, builtins.TIMESTAMPTZ]) {
+  serverTypes.setTypeParser(oid, 'text', (value) => new Date(value));
+}
+
+/**
+ * The type postgres.js declares for a parameter, from its JS value. pg declares
+ * none, so Postgres infers each from context, and where there is none the
+ * column comes back as text: the partner asset sync selects
+ * `sql.val(false).as('isFavorite')`, which the server sends as `false` and pg
+ * read as `"false"`. Arrays are left alone; no query the front door runs passes
+ * one.
+ */
+const declaredType = (value: unknown): string | undefined => {
+  if (typeof value === 'boolean') {
+    return 'bool';
+  }
+  if (value instanceof Date) {
+    return 'timestamptz';
+  }
+  if (value instanceof Uint8Array) {
+    return 'bytea';
+  }
+  if (typeof value === 'bigint') {
+    return 'int8';
+  }
+  return undefined;
+};
+
+/**
+ * Casts each placeholder to the type postgres.js would have declared for its
+ * value. A cast on an untyped parameter is how Postgres learns its type, so
+ * `$1::bool` resolves exactly as a `$1` declared bool does.
+ */
+class ServerQueryCompiler extends PostgresQueryCompiler {
+  protected override appendValue(value: unknown): void {
+    super.appendValue(value);
+    const type = declaredType(value);
+    if (type) {
+      this.append(`::${type}`);
+    }
+  }
+}
+
+class ServerDialect extends PostgresDialect {
+  override createQueryCompiler(): QueryCompiler {
+    return new ServerQueryCompiler();
+  }
+}
+
+/**
+ * A pool and a Kysely instance on one database, reading rows the way the server
+ * does. Every tenant pool is built here, and so are the medium tests' pools, so
+ * the dialect they exercise is the one in production.
+ */
+export const createDatabase = (config: pg.PoolConfig) => {
+  const pool = new pg.Pool({
+    ...config,
+    types: serverTypes,
+    // The text pg parses has to be the text postgres.js parses.
+    options: '-c TimeZone=UTC -c DateStyle=ISO',
+  });
+  // The server's sync repository streams its queries; with `pg` that needs a
+  // cursor implementation on the dialect.
+  const db = new Kysely<DB>({
+    dialect: new ServerDialect({ pool, cursor: Cursor }),
+  });
+  return { pool, db };
+};
 
 /**
  * The service talks to thousands of tenant databases through one role, so it cannot
@@ -109,7 +210,7 @@ export class TenantPools {
     }
 
     const database = databaseForTenant(tenant, this.config.databasePrefix);
-    const pool = new pg.Pool({
+    const { pool, db } = createDatabase({
       // The database MUST be carried in the connection string, not passed
       // alongside it. `pg` resolves the two with
       // `Object.assign({}, config, parse(config.connectionString))`, so anything
@@ -129,12 +230,6 @@ export class TenantPools {
 
     // A pool-level error must never take the process down: the tenant fails, not the fleet.
     pool.on('error', () => this.recordFailure(tenant));
-
-    // The server's sync repository streams its queries; with `pg` that needs a
-    // cursor implementation on the dialect.
-    const db = new Kysely<DB>({
-      dialect: new PostgresDialect({ pool, cursor: Cursor }),
-    });
 
     // Checked once per pool, before the pool is used for anything. Makes the
     // tenant-to-database mapping load-bearing at runtime rather than trusting
@@ -227,10 +322,42 @@ export class TenantPools {
   }
 }
 
+/**
+ * pg and pg-pool raise some database failures as plain Errors with no `code`, so
+ * these are recognised by message. Read as bugs they were 500s with a stack
+ * trace, where a statement timeout (57014) on the same slow query is a 503, or
+ * for sync/stream a relay.
+ *
+ * `Query read timeout` is the common one. It is pg's client-side `query_timeout`,
+ * which races the server-side `statement_timeout` set to the same value and
+ * usually wins, its clock having started first. For a cursor, which is how the
+ * sync repository reads every stream, pg-cursor never reports completion to it,
+ * so it runs from submission until the cursor closes: a dry run that reads one
+ * stream for longer than the timeout fails this way, however fast each read is.
+ */
+const CODELESS_DRIVER_ERRORS = new Map([
+  ['Query read timeout', 'query_timeout'],
+  ['timeout exceeded when trying to connect', 'connect_timeout'],
+  ['Connection terminated due to connection timeout', 'connect_timeout'],
+  ['Connection terminated unexpectedly', 'connection_lost'],
+  [
+    'Client has encountered a connection error and is not queryable',
+    'connection_lost',
+  ],
+]);
+
+const codelessReason = (error: unknown): string | undefined =>
+  error instanceof Error
+    ? CODELESS_DRIVER_ERRORS.get(error.message)
+    : undefined;
+
 /** A short, stable label for a driver failure, suitable for a metric label. */
 const driverReason = (error: unknown): string => {
   const code = (error as { code?: unknown })?.code;
-  return typeof code === 'string' ? code.toLowerCase() : 'query_failed';
+  if (typeof code === 'string') {
+    return code.toLowerCase();
+  }
+  return codelessReason(error) ?? 'query_failed';
 };
 
 /**
@@ -274,9 +401,12 @@ const verifyDatabase = async (
 };
 
 /**
- * pg sets a string `code` on every error it raises: an errno such as
- * ECONNREFUSED on connection failures, a SQLSTATE on query failures. A bug in
- * this service throws a TypeError or similar, which has none.
+ * pg sets a string `code` on most errors it raises: an errno such as
+ * ECONNREFUSED on connection failures, a SQLSTATE on query failures. The
+ * timeouts and lost connections it raises without one are in
+ * {@link CODELESS_DRIVER_ERRORS}. A bug in this service throws a TypeError or
+ * similar, which is neither.
  */
 const isDriverError = (error: unknown): boolean =>
-  typeof (error as { code?: unknown })?.code === 'string';
+  typeof (error as { code?: unknown })?.code === 'string' ||
+  codelessReason(error) !== undefined;

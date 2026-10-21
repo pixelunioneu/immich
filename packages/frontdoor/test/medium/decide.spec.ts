@@ -1,3 +1,4 @@
+import { Writable } from 'node:stream';
 import { Kysely } from 'kysely';
 import { DateTime } from 'luxon';
 import { AlbumUserRole, SyncEntityType, SyncRequestType } from 'src/enum';
@@ -9,17 +10,19 @@ import { toAck } from 'src/utils/sync';
 import { SyncTestContext } from 'test/medium.factory';
 import { getKyselyDB, wait } from 'test/utils';
 import { v7 } from 'uuid';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { setAcks } from '../../src/handlers/sync-ack.js';
 import { decide, type Verdict } from '../../src/handlers/sync-stream.js';
+import { frontdoorDb } from './frontdoor-db.js';
 
 /**
  * The property the whole of Phase 2 rests on: what the front door sends is what
  * the server's own stream would have sent, line for line, and it says "busy"
  * exactly when serving would have needed a write or more than the cap. Both
- * sides run upstream's `SyncService` on the same database, so what is under
- * test is the sentinel, the dry-run stubs and the read-only transaction, not
- * sync itself.
+ * sides run upstream's `SyncService` on the same database, the server on its
+ * own driver (postgres.js) and the front door on its production pool (pg, from
+ * src/db.ts), so what is under test is the sentinel, the dry-run stubs, the
+ * read-only transaction and the driver, not sync itself.
  *
  * Scenarios are the ones the server's own sync specs use for backfill, because
  * that is where a naive check goes wrong: output can come from an entity created
@@ -27,6 +30,8 @@ import { decide, type Verdict } from '../../src/handlers/sync-stream.js';
  */
 
 let defaultDatabase: Kysely<DB>;
+/** Where the front door's side runs. */
+let frontdoor: Kysely<DB>;
 
 const MAX_BYTES = 64 * 1024;
 
@@ -48,6 +53,18 @@ const parseLines = (body: string): Line[] =>
     .filter(Boolean)
     .map((line) => JSON.parse(line) as Line);
 
+/**
+ * Each run acks its terminating line with its own transaction's `now()`, so
+ * that one id differs by construction. It is the only part of a body masked.
+ */
+const withoutNowId = (body: string) => {
+  const complete = new RegExp(
+    `"ack":"${SyncEntityType.SyncCompleteV1}\\|[^"]+"`,
+  );
+  expect(body).toMatch(complete);
+  return body.replace(complete, '"ack":"<nowId>"');
+};
+
 class Context extends SyncTestContext {
   async decide(
     auth: { session?: { id: string }; user: { id: string } },
@@ -59,12 +76,29 @@ class Context extends SyncTestContext {
     // so a row written in the same millisecond is invisible to both sides.
     await wait(2);
     return decide(
-      this.database,
+      frontdoor,
       { sessionId: auth.session!.id, userId: auth.user.id },
       { types, reset },
       10_000,
       maxBytes,
     );
+  }
+
+  /** The server's own stream, as the bytes it writes to the response. */
+  async serverBody(
+    auth: Parameters<Context['decide']>[0],
+    types: SyncRequestType[],
+  ) {
+    const chunks: string[] = [];
+    const response = new Writable({
+      write(chunk, _encoding, done) {
+        chunks.push(String(chunk));
+        done();
+      },
+    });
+    await wait(2);
+    await this.sut.stream(auth as never, response, { types });
+    return chunks.join('');
   }
 
   /**
@@ -161,6 +195,11 @@ const setup = async () => {
 
 beforeAll(async () => {
   defaultDatabase = await getKyselyDB();
+  frontdoor = await frontdoorDb(defaultDatabase);
+});
+
+afterAll(async () => {
+  await frontdoor?.destroy();
 });
 
 describe('decide', () => {
@@ -238,6 +277,66 @@ describe('decide', () => {
     await ctx.ackServed(auth, bumped.verdict);
     const acked = await ctx.agree(auth, types);
     expect(acked.verdict.kind).toBe('empty');
+  });
+
+  it("sends the server's bytes for its bigint, date and timestamp columns", async () => {
+    // These read the same on both sides only because src/db.ts gives pg the
+    // server's parsers. pg's defaults send a bigint as a string, which the
+    // mobile client's generated model reads as null, and a date as midnight in
+    // this process's zone. The zone is pinned east of UTC, where that midnight
+    // is the day before, so the date is checked on a machine running in UTC too.
+    vi.stubEnv('TZ', 'Pacific/Auckland');
+    try {
+      const { auth, user, ctx } = await setup();
+      await ctx.database
+        .updateTable('user')
+        .set({
+          quotaSizeInBytes: 10 * 1024 ** 3,
+          quotaUsageInBytes: 1_234_567_890_123,
+        })
+        .where('id', '=', user.id)
+        .execute();
+      const { asset } = await ctx.newAsset({ ownerId: user.id });
+      await ctx.newExif({
+        assetId: asset.id,
+        fileSizeInByte: 5_000_000_000,
+        // Microseconds, which both drivers have to drop the same way.
+        dateTimeOriginal: '2021-03-04 05:06:07.123456+00',
+        modifyDate: '2021-03-04 06:07:08.654321+02',
+      });
+      await ctx.newPerson({ ownerId: user.id, birthDate: '1990-05-20' });
+      const types = [
+        SyncRequestType.AuthUsersV2,
+        SyncRequestType.UsersV1,
+        SyncRequestType.AssetsV2,
+        SyncRequestType.AssetExifsV1,
+        SyncRequestType.PeopleV1,
+      ];
+
+      const verdict = await ctx.decide(auth, types);
+      const server = await ctx.serverBody(auth, types);
+
+      expect(verdict).toMatchObject({ kind: 'served' });
+      const { body } = verdict as Extract<Verdict, { kind: 'served' }>;
+      expect(withoutNowId(body)).toBe(withoutNowId(server));
+
+      const data = (type: SyncEntityType) =>
+        parseLines(body).find((line) => line.type === type)?.data;
+      expect(data(SyncEntityType.AuthUserV2)).toMatchObject({
+        quotaSizeInBytes: 10 * 1024 ** 3,
+        quotaUsageInBytes: 1_234_567_890_123,
+      });
+      expect(data(SyncEntityType.AssetExifV1)).toMatchObject({
+        fileSizeInByte: 5_000_000_000,
+        dateTimeOriginal: '2021-03-04T05:06:07.123Z',
+        modifyDate: '2021-03-04T04:07:08.654Z',
+      });
+      expect(data(SyncEntityType.PersonV1)).toMatchObject({
+        birthDate: '1990-05-20T00:00:00.000Z',
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('is reset when the session has a pending reset', async () => {
