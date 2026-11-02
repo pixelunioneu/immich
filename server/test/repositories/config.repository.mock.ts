@@ -109,6 +109,7 @@ export const envData: EnvData = {
   puApiHost: null,
   puTenantName: null,
   puServiceAccountTokenPath: '/var/run/secrets/kubernetes.io/serviceaccount/token',
+  puWebhookAllowedHosts: null,
 };
 
 export const mockEnvData = (config: Partial<EnvData>) => ({ ...envData, ...config });
