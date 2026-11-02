@@ -17,6 +17,7 @@ import {
   signMaintenanceJwt,
 } from 'src/utils/maintenance.js';
 import { getExternalDomain } from 'src/utils/misc.js';
+import { assertNotDatabaseRestoreAction, refuseDatabaseRestore } from 'src/utils/pu-database-restore.js';
 
 /**
  * This service is available outside of maintenance mode to manage maintenance mode
@@ -42,6 +43,9 @@ export class MaintenanceService extends BaseService {
   }
 
   async startMaintenance(action: SetMaintenanceModeDto, username: string): Promise<{ jwt: string }> {
+    // PixelUnion: database restore is disabled (see pu-database-restore.ts).
+    assertNotDatabaseRestoreAction(action.action);
+
     const secret = generateMaintenanceSecret();
     await this.systemMetadataRepository.set(SystemMetadataKey.MaintenanceMode, {
       isMaintenanceMode: true,
@@ -59,6 +63,9 @@ export class MaintenanceService extends BaseService {
   }
 
   async startRestoreFlow(): Promise<{ jwt: string }> {
+    // PixelUnion: database restore is disabled (see pu-database-restore.ts).
+    refuseDatabaseRestore();
+
     return this.startMaintenance(
       {
         action: MaintenanceAction.SelectDatabaseRestore,

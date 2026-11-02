@@ -628,7 +628,8 @@ describe(DatabaseBackupService.name, () => {
     });
   });
 
-  describe('uploadBackup', () => {
+  // PixelUnion: database backup upload/restore is disabled; see src/pu-database-restore.spec.ts.
+  describe.skip('uploadBackup', () => {
     it('should reject invalid file names', async () => {
       await expect(sut.uploadBackup({ originalname: 'invalid backup' } as never)).rejects.toThrowError(
         new BadRequestException('Invalid backup name!'),
@@ -691,7 +692,8 @@ describe(DatabaseBackupService.name, () => {
     });
   });
 
-  describe('restoreDatabaseBackup', () => {
+  // PixelUnion: database backup upload/restore is disabled; see src/pu-database-restore.spec.ts.
+  describe.skip('restoreDatabaseBackup', () => {
     beforeEach(() => {
       mocks.storage.readdir.mockResolvedValue([]);
       mocks.process.spawn.mockReturnValue(mockSpawn(0, 'data', ''));

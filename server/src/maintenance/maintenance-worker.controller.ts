@@ -32,6 +32,7 @@ import { GetLoginDetails } from 'src/middleware/auth.guard.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { DatabaseBackupService } from 'src/services/database-backup.service.js';
 import { sendFile } from 'src/utils/file.js';
+import { assertNotDatabaseRestoreAction } from 'src/utils/pu-database-restore.js';
 import { respondWithCookie } from 'src/utils/response.js';
 import { FilenameParamDto } from 'src/validation.js';
 
@@ -133,6 +134,8 @@ export class MaintenanceWorkerController {
   @Post('admin/maintenance')
   @MaintenanceRoute()
   setMaintenanceMode(@Body() dto: SetMaintenanceModeDto): void {
+    // PixelUnion: refuse synchronously; setAction() is not awaited here.
+    assertNotDatabaseRestoreAction(dto.action);
     void this.service.setAction(dto);
   }
 }

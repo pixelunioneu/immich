@@ -129,6 +129,29 @@ describe('PixelUnion fork invariants', () => {
     expect(auth).toBeGreaterThan(blocked);
   });
 
+  it('BlockedRouteGuard is registered before MaintenanceAuthGuard in the maintenance worker', () => {
+    const source = read('server/src/app.module.ts');
+    const maintenanceModule = source.slice(
+      source.lastIndexOf('@Module(', source.indexOf('export class MaintenanceModule')),
+      source.indexOf('export class MaintenanceModule'),
+    );
+    const blocked = maintenanceModule.indexOf('{ provide: APP_GUARD, useClass: BlockedRouteGuard }');
+    const auth = maintenanceModule.indexOf('{ provide: APP_GUARD, useClass: MaintenanceAuthGuard }');
+    expect(blocked).toBeGreaterThan(-1);
+    expect(auth).toBeGreaterThan(blocked);
+  });
+
+  it.each([
+    ['server/src/services/database-backup.service.ts', 'refuseDatabaseRestore();', 2],
+    ['server/src/services/maintenance.service.ts', 'refuseDatabaseRestore();', 1],
+    ['server/src/services/maintenance.service.ts', 'assertNotDatabaseRestoreAction(action.action);', 1],
+    ['server/src/maintenance/maintenance-worker.service.ts', 'assertNotDatabaseRestoreAction(action.action);', 1],
+    ['server/src/maintenance/maintenance-worker.service.ts', 'isDatabaseRestoreAction(action.action)', 1],
+    ['server/src/maintenance/maintenance-worker.controller.ts', 'assertNotDatabaseRestoreAction(dto.action);', 1],
+  ])('%s keeps the database restore refusal (%s)', (path, snippet, count) => {
+    expect(read(path).split(snippet).length - 1).toBe(count);
+  });
+
   it.each([
     ['server/src/services/user.service.ts', 'updateMe'],
     ['server/src/services/user-admin.service.ts', 'update'],
