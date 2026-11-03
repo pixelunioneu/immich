@@ -143,6 +143,9 @@ export const Route = {
   geolocationUtility: () => '/utilities/geolocation',
   googlePhotosMigration: () => '/utilities/google-photos-migration',
 
+  // referral
+  referral: () => '/referral',
+
   // workflows
   workflows: () => '/workflows',
   viewWorkflow: ({ id }: { id: string }) => `/workflows/${id}`,

@@ -1,4 +1,5 @@
 import { PuReauthRequiredError } from '$lib/services/pu-email-change';
+import { getPuApiBaseUrl } from '$lib/utils/pu-api';
 import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '$lib/utils/pu-oidc';
 
 export class MigratorApiError extends Error {
@@ -61,11 +62,7 @@ export interface MigrationStorageResponse {
 export type StartMigrationResult = { status: 'started' } | { status: 'insufficient_storage'; detail: string };
 
 function getPuMigratorBaseUrl(): string {
-  const hostname = globalThis.location?.hostname ?? '';
-  if (hostname.includes('nonprd.tech.pixelunion.eu')) {
-    return 'https://api.nonprd.tech.pixelunion.eu/api/migrator/google-photos';
-  }
-  return 'https://api.prd.tech.pixelunion.eu/api/migrator/google-photos';
+  return `${getPuApiBaseUrl()}/api/migrator/google-photos`;
 }
 
 /** Tenant subdomain derived from the current Immich host. */
