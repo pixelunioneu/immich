@@ -2,8 +2,8 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { getReferral, type ReferralResult } from '$lib/services/pu-referral.service';
   import { copyToClipboard } from '$lib/utils';
-  import { Alert, Button, HStack, Input, LoadingSpinner } from '@immich/ui';
-  import { mdiContentCopy, mdiShareVariant } from '@mdi/js';
+  import { Alert, Button, HStack, Icon, Input, LoadingSpinner } from '@immich/ui';
+  import { mdiContentCopy, mdiOpenInNew, mdiShareVariant } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -80,5 +80,15 @@
         <Button shape="round" size="small" color="secondary" onclick={load}>{$t('retry')}</Button>
       </div>
     {/if}
+
+    <a
+      href="https://pixelunion.eu/referral/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-flex w-fit items-center gap-1 text-sm text-primary hover:underline"
+    >
+      {$t('referral_more_info')}
+      <Icon icon={mdiOpenInNew} size="14" />
+    </a>
   </div>
 </UserPageLayout>
