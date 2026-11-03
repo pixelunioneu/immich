@@ -22,10 +22,7 @@ describe(BlockedRouteGuard.name, () => {
         '/api/admin/database-backups',
         '/api/libraries',
         '/api/admin/maintenance',
-        '/api/admin/integrity',
-        '/api/jobs',
-        '/api/queues',
-        '/api/server/license',
+        '/api/admin/notifications/test-email',
       ]),
     );
   });
@@ -52,6 +49,7 @@ describe(BlockedRouteGuard.name, () => {
     '/api/server/config',
     '/api/admin/users',
     '/api/admin/notifications',
+    '/api/admin/notifications/templates/welcome',
     '/api/assets',
     '/api/library',
     '/api/server/version',
@@ -60,6 +58,12 @@ describe(BlockedRouteGuard.name, () => {
     '/api/admin/maintenances',
     '/api/job',
     '/api/queue',
+    // Tenant admins keep job/queue control, integrity reports and the license screen.
+    '/api/jobs',
+    '/api/queues/thumbnailGeneration',
+    '/api/admin/integrity/report',
+    '/api/server/license',
+    '/api/Jobs',
     '/',
   ])('should allow %s', (path) => {
     expect(sut.canActivate(contextFor(path))).toBe(true);
@@ -74,10 +78,7 @@ describe(BlockedRouteGuard.name, () => {
     '/api/admin/Database-Backups/upload',
     '/api/ADMIN/maintenance',
     '/api/Admin/Maintenance/Detect-Install',
-    '/api/Jobs',
-    '/api/QUEUES/thumbnailGeneration',
-    '/api/server/License',
-    '/api/admin/Integrity/report',
+    '/api/Admin/Notifications/Test-Email',
   ])('should 404 mixed-case %s', (path) => {
     expect(() => sut.canActivate(contextFor(path))).toThrow(NotFoundException);
   });

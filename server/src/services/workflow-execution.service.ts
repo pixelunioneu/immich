@@ -32,6 +32,8 @@ import { AssetService } from 'src/services/asset.service.js';
 import { BaseService } from 'src/services/base.service.js';
 import { TagService } from 'src/services/tag.service.js';
 
+export const PU_HTTP_REQUEST_DISABLED = 'Outbound HTTP requests from workflows are disabled on this server';
+
 const dummy = () => {
   throw new Error(
     `Calling host functions is not allowed without setting methods[].hostFunctions=true in the plugin manifest`,
@@ -91,25 +93,10 @@ export class WorkflowExecutionService extends BaseService {
           body?: string;
         },
       ]
-    >(async (authDto, context, args) => {
-      const hostname = new URL(args[0]).hostname;
-
-      for (const pattern of context.allowedHosts) {
-        const regex = new RegExp(pattern.replaceAll('.', String.raw`\.`).replaceAll('*', '.*'));
-        if (regex.test(hostname)) {
-          // eslint-disable-next-line unicorn/no-invalid-argument-count
-          const res = await fetch(...args);
-
-          return {
-            ok: res.ok,
-            status: res.status,
-            body: await res.text(),
-          };
-        }
-      }
-
-      throw new Error('Hostname did not match any listed in methods[].allowedHosts in the plugin manifest');
-    });
+    >(() =>
+      // PixelUnion: outbound HTTP from workflows (the webhook action) is disabled on this server
+      Promise.reject(new Error(PU_HTTP_REQUEST_DISABLED)),
+    );
     const bulkTagAssets = this.wrap<[dto: TagBulkAssetsDto]>((authDto, ctx, args) =>
       tagService.bulkTagAssets(authDto, ...args),
     );

@@ -20,6 +20,9 @@ import { getCalendarHeatmap } from 'src/services/shared/user-methods.js';
 import { findOrFail } from 'src/utils/misc.js';
 import { getPreferences, getPreferencesPartial, mergePreferences } from 'src/utils/preferences.js';
 
+// PixelUnion: placeholder password previously sent by the admin "create user" form.
+export const LEGACY_PLACEHOLDER_PASSWORD = 'DummyValueNeverUsed';
+
 @Injectable()
 export class UserAdminService extends BaseService {
   async search(auth: AuthDto, dto: UserAdminSearchDto): Promise<UserAdminResponseDto[]> {
@@ -37,12 +40,20 @@ export class UserAdminService extends BaseService {
       throw new BadRequestException('password is required');
     }
 
+    // PixelUnion: users are created without a password (they sign in via OAuth). Older web clients send a
+    // fixed placeholder value; never store that (or an empty value) as a usable password. Replace it with a
+    // random secret nobody knows, and keep it out of the signup event / notification job payload.
+    const generatePassword = !userDto.password || userDto.password === LEGACY_PLACEHOLDER_PASSWORD;
+    if (generatePassword) {
+      userDto.password = this.cryptoRepository.randomBytesAsText(32);
+    }
+
     const user = await this.createUser(userDto);
 
     await this.eventRepository.emit('UserSignup', {
       notify: !!notify,
       id: user.id,
-      password: userDto.password,
+      password: generatePassword ? undefined : userDto.password,
     });
 
     return mapUserAdmin(user);

@@ -11,8 +11,12 @@
   let success = $state(false);
 
   let email = $state('');
-  let password = 'DummyValueNeverUsed';
-  let passwordConfirm = 'DummyValueNeverUsed';
+  // PixelUnion: users sign in via OAuth, so the password fields are hidden. Send a random, never-shown value
+  // instead of a fixed one; the server also replaces missing/placeholder values with its own random secret.
+  const generatePassword = () => {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  };
   let name = $state('');
   let shouldChangePassword = $state(true);
   let notify = $state(true);
@@ -26,9 +30,7 @@
     quotaSizeInBytes && userInteraction.serverInfo && quotaSizeInBytes > userInteraction.serverInfo.diskSizeRaw,
   );
 
-  const passwordMismatch = $derived(password !== passwordConfirm && passwordConfirm.length > 0);
-  const passwordMismatchMessage = $derived(passwordMismatch ? $t('password_does_not_match') : '');
-  const valid = $derived(!passwordMismatch && !isCreatingUser);
+  const valid = $derived(!isCreatingUser);
 
   const onClose = async () => {
     await goto(Route.users());
@@ -45,7 +47,7 @@
 
     const user = await handleCreateUserAdmin({
       email,
-      password,
+      password: generatePassword(),
       shouldChangePassword,
       name,
       quotaSizeInBytes,
