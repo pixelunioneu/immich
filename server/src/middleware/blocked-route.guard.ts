@@ -5,9 +5,9 @@ import { Request } from 'express';
  * PixelUnion: routes that must not be reachable on a hosted tenant deployment.
  *
  * These endpoints expose server-wide admin surface (system configuration, external
- * libraries, database backups, maintenance mode, job and queue control, server
- * licensing, the SMTP test email, which connects to any host:port in the request)
- * that tenant admins should not have on a hosted deployment, where the
+ * libraries, database backups, maintenance mode, the SMTP test email, which connects
+ * to any host:port in the request) that tenant admins should not have on a hosted
+ * deployment, where the
  * operator manages the server. The same routes are also blocked at the edge; this
  * guard is the in-image copy, so the guarantee travels with the server image.
  *
@@ -27,10 +27,6 @@ export const BLOCKED_ROUTE_PREFIXES = [
   '/api/admin/database-backups',
   '/api/libraries',
   '/api/admin/maintenance',
-  '/api/admin/integrity',
-  '/api/jobs',
-  '/api/queues',
-  '/api/server/license',
   '/api/admin/notifications/test-email',
 ];
 
