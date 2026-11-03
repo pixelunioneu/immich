@@ -71,7 +71,6 @@
             </Button>
           {/if}
         </div>
-        <p class="text-sm text-immich-fg/75 dark:text-immich-dark-fg/75">{$t('referral_friend_discount')}</p>
       </section>
     {:else if result.status === 'none'}
       <Alert color="info" size="small" title={$t('referral_none')} />

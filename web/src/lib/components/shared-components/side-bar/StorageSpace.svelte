@@ -1,6 +1,5 @@
 <script lang="ts">
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { userInteraction } from '$lib/stores/user.svelte';
   import { requestServerInfo } from '$lib/utils/auth';
@@ -58,9 +57,6 @@
       value={usedBytes / availableBytes}
       {thresholds}
     />
-    <a href={Route.referral()} class="mt-2 inline-block text-xs text-primary hover:underline">
-      {$t('referral_sidebar_link')}
-    </a>
   {:else}
     <p class="mb-4 font-medium text-immich-dark-gray dark:text-white">{$t('storage')}</p>
     <LoadingSpinner />

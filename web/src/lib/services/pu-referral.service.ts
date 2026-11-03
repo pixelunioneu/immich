@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/public';
 import { getPuApiBaseUrl } from '$lib/utils/pu-api';
 
 export interface Referral {
@@ -17,6 +18,15 @@ export type ReferralResult = { status: 'ok'; referral: Referral } | { status: 'n
  * unauthenticated and looked up by host, so every user on the tenant gets the same link.
  */
 export async function getReferral(): Promise<ReferralResult> {
+  // Dev builds only: the referral endpoint looks tenants up by host, which never matches localhost.
+  const fakeReferralId = import.meta.env.DEV ? env.PUBLIC_PU_FAKE_REFERRAL_ID : undefined;
+  if (fakeReferralId) {
+    return {
+      status: 'ok',
+      referral: { referral_id: fakeReferralId, referral_url: `https://pixelunion.eu/?ref=${fakeReferralId}` },
+    };
+  }
+
   const hostname = location.hostname;
   let response: Response;
   try {
