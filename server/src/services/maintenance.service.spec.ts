@@ -134,7 +134,8 @@ describe(MaintenanceService.name, () => {
     });
   });
 
-  describe('startRestoreFlow', () => {
+  // PixelUnion: database backup upload/restore is disabled; see src/pu-database-restore.spec.ts.
+  describe.skip('startRestoreFlow', () => {
     it('should start maintenance mode and return a jwt', async () => {
       mocks.systemMetadata.get.mockResolvedValue({ isMaintenanceMode: false });
 

@@ -31,6 +31,7 @@ import {
 } from 'src/utils/database-backups.js';
 import { ImmichFileResponse } from 'src/utils/file.js';
 import { handlePromiseError } from 'src/utils/misc.js';
+import { refuseDatabaseRestore } from 'src/utils/pu-database-restore.js';
 
 @Injectable()
 export class DatabaseBackupService {
@@ -268,6 +269,9 @@ export class DatabaseBackupService {
   }
 
   async uploadBackup(file: Express.Multer.File): Promise<void> {
+    // PixelUnion: backup upload is disabled (see pu-database-restore.ts).
+    refuseDatabaseRestore();
+
     const backupsFolder = StorageCore.getBaseFolder(StorageFolder.Backups);
     const fn = basename(file.originalname);
     if (!isValidDatabaseBackupName(fn)) {
@@ -362,6 +366,9 @@ export class DatabaseBackupService {
     filename: string,
     progressCb?: (action: 'backup' | 'restore' | 'migrations' | 'rollback', progress: number) => void,
   ): Promise<void> {
+    // PixelUnion: database restore is disabled (see pu-database-restore.ts).
+    refuseDatabaseRestore();
+
     this.logger.debug(`Database Restore Started`);
 
     let isComplete = false;

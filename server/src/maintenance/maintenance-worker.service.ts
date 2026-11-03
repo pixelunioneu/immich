@@ -32,6 +32,11 @@ import { type VersionService as _VersionService } from 'src/services/version.ser
 import { getConfig } from 'src/utils/config.js';
 import { createMaintenanceLoginUrl, detectPriorInstall } from 'src/utils/maintenance.js';
 import { getExternalDomain } from 'src/utils/misc.js';
+import {
+  DATABASE_RESTORE_DISABLED_MESSAGE,
+  assertNotDatabaseRestoreAction,
+  isDatabaseRestoreAction,
+} from 'src/utils/pu-database-restore.js';
 
 /**
  * This service is available inside of maintenance mode to manage maintenance mode
@@ -271,6 +276,9 @@ export class MaintenanceWorkerService {
   }
 
   async setAction(action: SetMaintenanceModeDto) {
+    // PixelUnion: database restore is disabled (see pu-database-restore.ts).
+    assertNotDatabaseRestoreAction(action.action);
+
     this.setStatus({
       active: true,
       action: action.action,
@@ -280,6 +288,13 @@ export class MaintenanceWorkerService {
   }
 
   async runAction(action: SetMaintenanceModeDto) {
+    // PixelUnion: database restore is disabled (see pu-database-restore.ts). This also
+    // covers a restore action persisted in system metadata and picked up by init().
+    if (isDatabaseRestoreAction(action.action)) {
+      this.logger.error(DATABASE_RESTORE_DISABLED_MESSAGE);
+      return;
+    }
+
     switch (action.action) {
       case MaintenanceAction.Start:
       case MaintenanceAction.SelectDatabaseRestore: {

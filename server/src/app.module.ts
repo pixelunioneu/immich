@@ -133,6 +133,8 @@ export class ApiModule extends BaseModule {}
     DatabaseBackupService,
     MaintenanceWorkerService,
     ...commonMiddleware,
+    // PixelUnion: the maintenance worker serves database-backup and maintenance routes too.
+    { provide: APP_GUARD, useClass: BlockedRouteGuard },
     { provide: APP_GUARD, useClass: MaintenanceAuthGuard },
     { provide: IWorker, useValue: ImmichWorker.Maintenance },
   ],

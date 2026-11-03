@@ -317,7 +317,8 @@ describe(MaintenanceWorkerService.name, () => {
     });
   });
 
-  describe('action: restore database', () => {
+  // PixelUnion: database backup upload/restore is disabled; see src/pu-database-restore.spec.ts.
+  describe.skip('action: restore database', () => {
     beforeEach(() => {
       mocks.database.tryLock.mockResolvedValueOnce(true);
     });
