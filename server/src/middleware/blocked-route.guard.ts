@@ -6,7 +6,8 @@ import { Request } from 'express';
  *
  * These endpoints expose server-wide admin surface (system configuration, external
  * libraries, database backups, maintenance mode, job and queue control, server
- * licensing) that tenant admins should not have on a hosted deployment, where the
+ * licensing, the SMTP test email, which connects to any host:port in the request)
+ * that tenant admins should not have on a hosted deployment, where the
  * operator manages the server. The same routes are also blocked at the edge; this
  * guard is the in-image copy, so the guarantee travels with the server image.
  *
@@ -30,6 +31,7 @@ export const BLOCKED_ROUTE_PREFIXES = [
   '/api/jobs',
   '/api/queues',
   '/api/server/license',
+  '/api/admin/notifications/test-email',
 ];
 
 /**

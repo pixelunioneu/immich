@@ -26,6 +26,7 @@ describe(BlockedRouteGuard.name, () => {
         '/api/jobs',
         '/api/queues',
         '/api/server/license',
+        '/api/admin/notifications/test-email',
       ]),
     );
   });
@@ -52,6 +53,7 @@ describe(BlockedRouteGuard.name, () => {
     '/api/server/config',
     '/api/admin/users',
     '/api/admin/notifications',
+    '/api/admin/notifications/templates/welcome',
     '/api/assets',
     '/api/library',
     '/api/server/version',
@@ -78,6 +80,7 @@ describe(BlockedRouteGuard.name, () => {
     '/api/QUEUES/thumbnailGeneration',
     '/api/server/License',
     '/api/admin/Integrity/report',
+    '/api/Admin/Notifications/Test-Email',
   ])('should 404 mixed-case %s', (path) => {
     expect(() => sut.canActivate(contextFor(path))).toThrow(NotFoundException);
   });
