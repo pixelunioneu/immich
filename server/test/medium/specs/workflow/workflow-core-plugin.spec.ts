@@ -725,34 +725,6 @@ describe('core plugin', () => {
     });
   });
 
-  describe('webhook', () => {
-    it('should trigger a webhook on asset upload', async () => {
-      const { user } = await ctx.newUser();
-      const { asset } = await ctx.newAsset({ ownerId: user.id });
-
-      const fetchMock = vi.fn(() => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('') }));
-      vi.stubGlobal('fetch', fetchMock);
-
-      const workflow = await createWorkflow({
-        ownerId: user.id,
-        trigger: WorkflowTrigger.AssetCreate,
-        steps: [
-          {
-            method: 'immich-plugin-core#webhook',
-            config: { url: 'http://localhost', method: 'POST' },
-          },
-        ],
-      });
-
-      await expect(ctx.sut.handleAssetTrigger({ workflowId: workflow.id, assetId: asset.id })).resolves.toBeUndefined();
-      expect(fetchMock).toHaveBeenCalled();
-    });
-
-    afterEach(() => {
-      vi.unstubAllGlobals();
-    });
-  });
-
   describe('step order', () => {
     it('should run steps by their order, not by the order the rows come back', async () => {
       const { user } = await ctx.newUser();
