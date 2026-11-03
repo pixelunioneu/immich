@@ -6,6 +6,7 @@ import { NotificationLevel, NotificationType } from 'src/enum.js';
 import { EmailTemplate } from 'src/repositories/email.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { getExternalDomain } from 'src/utils/misc.js';
+import { assertSmtpTestAllowed } from 'src/utils/pu-smtp.js';
 
 @Injectable()
 export class NotificationAdminService extends BaseService {
@@ -23,6 +24,8 @@ export class NotificationAdminService extends BaseService {
   }
 
   async sendTestEmail(id: string, dto: SystemConfigSmtpDto, tempTemplate?: string) {
+    assertSmtpTestAllowed(this.configRepository.getEnv());
+
     const user = await this.userRepository.get(id, { withDeleted: false });
     if (!user) {
       throw new Error('User not found');

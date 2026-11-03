@@ -29,6 +29,7 @@ import { getFilenameExtension } from 'src/utils/file.js';
 import { getExternalDomain } from 'src/utils/misc.js';
 import { isEqualObject } from 'src/utils/object.js';
 import { getPreferences } from 'src/utils/preferences.js';
+import { assertSmtpTestAllowed } from 'src/utils/pu-smtp.js';
 
 @Injectable()
 export class NotificationService extends BaseService {
@@ -257,6 +258,8 @@ export class NotificationService extends BaseService {
   }
 
   async sendTestEmail(id: string, dto: SystemConfigSmtpDto, tempTemplate?: string) {
+    assertSmtpTestAllowed(this.configRepository.getEnv());
+
     const user = await this.userRepository.get(id, { withDeleted: false });
     if (!user) {
       throw new Error('User not found');

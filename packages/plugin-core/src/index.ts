@@ -206,28 +206,6 @@ const methods = wrapper<Manifest>({
   assetVisibility: ({ config }) => ({
     changes: { asset: { visibility: config.visibility as AssetVisibility } },
   }),
-
-  webhook: ({ config, data, functions, type, trigger }) => {
-    const headers: Record<string, string> = {};
-
-    if (config.headerName && config.headerValue) {
-      headers[config.headerName] = config.headerValue;
-    }
-
-    headers['Content-Type'] = 'application/json';
-
-    functions.httpRequest(config.url, {
-      method: config.method ?? 'POST',
-      body: JSON.stringify({
-        type,
-        trigger,
-        data,
-      }),
-      headers,
-    });
-
-    return {};
-  },
 });
 
 const {
@@ -244,7 +222,6 @@ const {
   assetTagFilter,
   assetTypeFilter,
   assetVisibility,
-  webhook,
 
   // should be empty. ensures that every field is destructured
   ...rest
@@ -264,7 +241,6 @@ export {
   assetTagFilter,
   assetTypeFilter,
   assetVisibility,
-  webhook,
 };
 
 'All methods must be destructured and exported' satisfies string & typeof rest;
