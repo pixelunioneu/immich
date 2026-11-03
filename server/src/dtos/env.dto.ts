@@ -90,6 +90,5 @@ export const EnvSchema = z
     PU_API_HOST: z.string().optional(),
     PU_TENANT_NAME: z.string().optional(),
     PU_SERVICE_ACCOUNT_TOKEN_PATH: z.string().optional(),
-    IMMICH_WEBHOOK_ALLOWED_HOSTS: z.string().optional(),
   })
   .meta({ id: 'EnvDto' });

@@ -31,7 +31,8 @@ import { AlbumService } from 'src/services/album.service.js';
 import { AssetService } from 'src/services/asset.service.js';
 import { BaseService } from 'src/services/base.service.js';
 import { TagService } from 'src/services/tag.service.js';
-import { webhookRequest } from 'src/utils/pu-webhook.js';
+
+export const PU_HTTP_REQUEST_DISABLED = 'Outbound HTTP requests from workflows are disabled on this server';
 
 const dummy = () => {
   throw new Error(
@@ -92,12 +93,9 @@ export class WorkflowExecutionService extends BaseService {
           body?: string;
         },
       ]
-    >((authDto, context, [url, options]) =>
-      // PixelUnion: anchored host matching, operator allowlist and private-address protection
-      webhookRequest(url, options, {
-        pluginAllowedHosts: context.allowedHosts,
-        operatorAllowedHosts: this.configRepository.getEnv().puWebhookAllowedHosts,
-      }),
+    >(() =>
+      // PixelUnion: outbound HTTP from workflows (the webhook action) is disabled on this server
+      Promise.reject(new Error(PU_HTTP_REQUEST_DISABLED)),
     );
     const bulkTagAssets = this.wrap<[dto: TagBulkAssetsDto]>((authDto, ctx, args) =>
       tagService.bulkTagAssets(authDto, ...args),

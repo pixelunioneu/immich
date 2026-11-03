@@ -23,7 +23,6 @@ import {
   LogLevel,
   QueueName,
 } from 'src/enum.js';
-import { parseAllowedHosts } from 'src/utils/pu-webhook.js';
 import { setDifference } from 'src/utils/set.js';
 
 export interface EnvData {
@@ -134,7 +133,6 @@ export interface EnvData {
   puApiHost: string | null;
   puTenantName: string | null;
   puServiceAccountTokenPath: string;
-  puWebhookAllowedHosts: string[] | null;
 }
 
 const productionKeys = {
@@ -387,7 +385,6 @@ const getEnv = (): EnvData => {
     puTenantName: dto.PU_TENANT_NAME || null,
     puServiceAccountTokenPath:
       dto.PU_SERVICE_ACCOUNT_TOKEN_PATH || '/var/run/secrets/kubernetes.io/serviceaccount/token',
-    puWebhookAllowedHosts: parseAllowedHosts(dto.IMMICH_WEBHOOK_ALLOWED_HOSTS),
   };
 };
 
