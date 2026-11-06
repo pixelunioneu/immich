@@ -26,6 +26,7 @@ At PixelUnion, we value openness and open source. This document is a short index
 20. Mobile login timeout raised to 30s
 21. Mobile first-launch onboarding welcome screen
 22. Sentry error tracking (opt-in per-user toggle)
+23. CSAT feedback pop-up (anonymous Formbricks link survey; `web/static/csat.v1.js`)
 
 # Updating fork
 
