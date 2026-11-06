@@ -20,6 +20,6 @@ describe('getBytesWithUnit', () => {
 
 describe('asByteUnitString', () => {
   it('should correctly return string', () => {
-    expect(getByteUnitString(42 * 2 ** 20)).toEqual('42 MiB');
+    expect(getByteUnitString(42 * 2 ** 20)).toEqual('42 MB');
   });
 });

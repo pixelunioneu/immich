@@ -427,6 +427,17 @@ export const PersonUpdateStrategySchema = z
   .describe('Which person records to update when editing a person')
   .meta({ id: 'PersonUpdateStrategy' });
 
+export enum StorageWarningLevel {
+  None = 'none',
+  AlmostFull = 'almostFull',
+  Full = 'full',
+}
+
+export const StorageWarningLevelSchema = z
+  .enum(StorageWarningLevel)
+  .describe('Highest storage warning level shown to the user since storage was last below the warning threshold')
+  .meta({ id: 'StorageWarningLevel' });
+
 export enum UserStatus {
   Active = 'active',
   Removing = 'removing',

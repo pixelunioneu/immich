@@ -6,6 +6,7 @@
   import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
   import { Route } from '$lib/route';
   import { userInteraction } from '$lib/stores/user.svelte';
+  import { PU_BILLING_PORTAL_URL } from '$lib/utils/pu-api';
   import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
   import { Button, Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiCog, mdiCreditCard, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
@@ -93,7 +94,7 @@
         </Button>
 
         <Button
-          href="https://billing.stripe.com/p/login/14kaFHfe8aTHa2s5kk"
+          href={PU_BILLING_PORTAL_URL}
           onclick={onClose}
           shape="round"
           variant="ghost"

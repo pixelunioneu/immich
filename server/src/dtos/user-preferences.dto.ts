@@ -1,7 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 import type { UserPreferences } from 'src/types.js';
-import { AssetOrderSchema, PersonUpdateStrategySchema, UserAvatarColorSchema } from 'src/enum.js';
+import {
+  AssetOrderSchema,
+  PersonUpdateStrategySchema,
+  StorageWarningLevelSchema,
+  UserAvatarColorSchema,
+} from 'src/enum.js';
 
 const AlbumsUpdateSchema = z
   .object({
@@ -114,6 +119,13 @@ const TelemetryUpdateSchema = z
   .optional()
   .meta({ id: 'TelemetryUpdate' });
 
+const StorageWarningUpdateSchema = z
+  .object({
+    shownLevel: StorageWarningLevelSchema.optional(),
+  })
+  .optional()
+  .meta({ id: 'StorageWarningUpdate' });
+
 const UserPreferencesUpdateSchema = z
   .object({
     albums: AlbumsUpdateSchema,
@@ -130,6 +142,7 @@ const UserPreferencesUpdateSchema = z
     tags: TagsUpdateSchema,
     recentlyAdded: RecentlyAddedUpdateSchema,
     telemetry: TelemetryUpdateSchema,
+    storageWarning: StorageWarningUpdateSchema,
   })
   .meta({ id: 'UserPreferencesUpdateDto' });
 
@@ -223,6 +236,12 @@ const TelemetryResponseSchema = z
   })
   .meta({ id: 'TelemetryResponse' });
 
+const StorageWarningResponseSchema = z
+  .object({
+    shownLevel: StorageWarningLevelSchema,
+  })
+  .meta({ id: 'StorageWarningResponse' });
+
 const UserPreferencesResponseSchema = z
   .object({
     albums: AlbumsResponseSchema,
@@ -238,6 +257,7 @@ const UserPreferencesResponseSchema = z
     cast: CastResponseSchema,
     recentlyAdded: RecentlyAddedResponseSchema,
     telemetry: TelemetryResponseSchema,
+    storageWarning: StorageWarningResponseSchema,
   })
   .meta({ id: 'UserPreferencesResponseDto' });
 

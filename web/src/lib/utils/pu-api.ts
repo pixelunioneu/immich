@@ -6,3 +6,6 @@ export function getPuApiBaseUrl(): string {
   }
   return 'https://api.prd.tech.pixelunion.eu';
 }
+
+/** Stripe customer portal where tenant owners manage and upgrade their subscription. */
+export const PU_BILLING_PORTAL_URL = 'https://billing.stripe.com/p/login/14kaFHfe8aTHa2s5kk';

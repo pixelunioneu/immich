@@ -4,26 +4,14 @@
   import { userInteraction } from '$lib/stores/user.svelte';
   import { requestServerInfo } from '$lib/utils/auth';
   import { getByteUnitString } from '$lib/utils/byte-units';
+  import { getStorageUsage, STORAGE_METER_THRESHOLDS } from '$lib/utils/storage-warning';
   import { LoadingSpinner, Meter } from '@immich/ui';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
-  let hasQuota = $derived(authManager.user.quotaSizeInBytes !== null);
-  let availableBytes = $derived(
-    (hasQuota && authManager.authenticated
-      ? authManager.user.quotaSizeInBytes
-      : userInteraction.serverInfo?.diskSizeRaw) || 0,
-  );
-  let usedBytes = $derived(
-    (hasQuota && authManager.authenticated
-      ? authManager.user.quotaUsageInBytes
-      : userInteraction.serverInfo?.diskUseRaw) || 0,
-  );
-
-  const thresholds = [
-    { from: 0.8, className: 'bg-warning' },
-    { from: 0.95, className: 'bg-danger' },
-  ];
+  let usage = $derived(getStorageUsage());
+  let availableBytes = $derived(usage?.totalBytes ?? 0);
+  let usedBytes = $derived(usage?.usedBytes ?? 0);
 
   onMount(async () => {
     if (userInteraction.serverInfo && authManager.authenticated) {
@@ -55,7 +43,7 @@
         },
       })}
       value={usedBytes / availableBytes}
-      {thresholds}
+      thresholds={STORAGE_METER_THRESHOLDS}
     />
   {:else}
     <p class="mb-4 font-medium text-immich-dark-gray dark:text-white">{$t('storage')}</p>

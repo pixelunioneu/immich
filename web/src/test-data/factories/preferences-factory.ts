@@ -1,4 +1,4 @@
-import { AssetOrder, PersonUpdateStrategy, type UserPreferencesResponseDto } from '@immich/sdk';
+import { AssetOrder, PersonUpdateStrategy, StorageWarningLevel, type UserPreferencesResponseDto } from '@immich/sdk';
 import { Sync } from 'factory.ts';
 
 export const preferencesFactory = Sync.makeFactory<UserPreferencesResponseDto>({
@@ -51,5 +51,8 @@ export const preferencesFactory = Sync.makeFactory<UserPreferencesResponseDto>({
   },
   telemetry: {
     enabled: false,
+  },
+  storageWarning: {
+    shownLevel: StorageWarningLevel.None,
   },
 });
