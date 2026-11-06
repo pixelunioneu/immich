@@ -26,7 +26,7 @@
       // Card size in px. The embed does not report its height, so this is fixed: raise
       // `height` if a later question (e.g. the comment box) starts to scroll.
       width: 360,
-      height: 360,
+      height: 420,
       closeAfterCompleteMs: 4000, // leave the thank-you screen visible this long, then close
       // Pages that are public or not part of the signed-in experience: never count or ask there.
       skipPaths: /^\/(share|s|auth|maintenance|link)(\/|$)/,
