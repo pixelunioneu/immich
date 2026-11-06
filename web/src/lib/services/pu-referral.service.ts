@@ -52,3 +52,24 @@ export async function getReferral(): Promise<ReferralResult> {
     return { status: 'unavailable' };
   }
 }
+
+/** Referral UI is only offered up to this total storage: the smallest plans, where 5 GB extra matters most. */
+export const MAX_REFERRAL_TOTAL_STORAGE_BYTES = 16 * 1024 ** 3;
+
+export function isReferralEligible(totalBytes: number | null | undefined): boolean {
+  return totalBytes !== null && totalBytes !== undefined && totalBytes <= MAX_REFERRAL_TOTAL_STORAGE_BYTES;
+}
+
+// Shared across callers (sidebar banner, storage popup) so navigating doesn't refetch. A failed
+// lookup is dropped so the next call retries; "no referral" is kept, it won't change soon.
+let pending: Promise<ReferralResult> | undefined;
+
+export function loadReferral(): Promise<ReferralResult> {
+  pending ??= getReferral().then((result) => {
+    if (result.status === 'unavailable') {
+      pending = undefined;
+    }
+    return result;
+  });
+  return pending;
+}

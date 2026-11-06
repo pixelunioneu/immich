@@ -712,6 +712,9 @@ export type SharedLinksResponse = {
     /** Whether shared links appear in web sidebar */
     sidebarWeb: boolean;
 };
+export type StorageWarningResponse = {
+    shownLevel: StorageWarningLevel;
+};
 export type TagsResponse = {
     /** Whether tags are enabled */
     enabled: boolean;
@@ -734,6 +737,7 @@ export type UserPreferencesResponseDto = {
     ratings: RatingsResponse;
     recentlyAdded: RecentlyAddedResponse;
     sharedLinks: SharedLinksResponse;
+    storageWarning: StorageWarningResponse;
     tags: TagsResponse;
     telemetry: TelemetryResponse;
 };
@@ -804,6 +808,9 @@ export type SharedLinksUpdate = {
     /** Whether shared links appear in web sidebar */
     sidebarWeb?: boolean;
 };
+export type StorageWarningUpdate = {
+    shownLevel?: StorageWarningLevel;
+};
 export type TagsUpdate = {
     /** Whether tags are enabled */
     enabled?: boolean;
@@ -827,6 +834,7 @@ export type UserPreferencesUpdateDto = {
     ratings?: RatingsUpdate;
     recentlyAdded?: RecentlyAddedUpdate;
     sharedLinks?: SharedLinksUpdate;
+    storageWarning?: StorageWarningUpdate;
     tags?: TagsUpdate;
     telemetry?: TelemetryUpdate;
 };
@@ -8126,6 +8134,11 @@ export enum AssetOrder {
 export enum PersonUpdateStrategy {
     Self = "self",
     Everyone = "everyone"
+}
+export enum StorageWarningLevel {
+    None = "none",
+    AlmostFull = "almostFull",
+    Full = "full"
 }
 export enum AssetVisibility {
     Archive = "archive",

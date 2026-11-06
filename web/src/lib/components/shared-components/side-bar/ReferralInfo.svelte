@@ -1,36 +1,13 @@
-<script module lang="ts">
-  import { getReferral, type ReferralResult } from '$lib/services/pu-referral.service';
-
-  // Shared across sidebar mounts so navigating doesn't refetch. A failed lookup is
-  // dropped so the next mount retries; "no referral" is kept, it won't change soon.
-  let pending: Promise<ReferralResult> | undefined;
-
-  function loadReferral(): Promise<ReferralResult> {
-    pending ??= getReferral().then((result) => {
-      if (result.status === 'unavailable') {
-        pending = undefined;
-      }
-      return result;
-    });
-    return pending;
-  }
-</script>
-
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { isReferralEligible, loadReferral } from '$lib/services/pu-referral.service';
   import { Route } from '$lib/route';
-  import { userInteraction } from '$lib/stores/user.svelte';
+  import { getStorageUsage } from '$lib/utils/storage-warning';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight, mdiGiftOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
-  // Hidden once total storage is above the smallest plans.
-  const MAX_TOTAL_STORAGE_BYTES = 16 * 1024 ** 3;
-
   // The same total the storage meter shows: the user's quota, or else the server disk size.
-  let quota = $derived(authManager.authenticated ? authManager.user.quotaSizeInBytes : null);
-  let totalBytes = $derived(quota ?? userInteraction.serverInfo?.diskSizeRaw);
-  let eligible = $derived(totalBytes !== undefined && totalBytes <= MAX_TOTAL_STORAGE_BYTES);
+  let eligible = $derived(isReferralEligible(getStorageUsage()?.totalBytes));
   let hasReferral = $state(false);
 
   $effect(() => {

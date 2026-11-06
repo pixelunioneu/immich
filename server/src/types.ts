@@ -27,6 +27,7 @@ import {
   PersonUpdateStrategy,
   QueueName,
   StorageFolder,
+  StorageWarningLevel,
   SyncEntityType,
   SystemMetadataKey,
   TranscodeTarget,
@@ -615,6 +616,9 @@ export type UserPreferences = {
   };
   telemetry: {
     enabled: boolean;
+  };
+  storageWarning: {
+    shownLevel: StorageWarningLevel;
   };
 };
 

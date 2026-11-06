@@ -30024,6 +30024,34 @@
         ],
         "type": "string"
       },
+      "StorageWarningLevel": {
+        "description": "Highest storage warning level shown to the user since storage was last below the warning threshold",
+        "enum": [
+          "none",
+          "almostFull",
+          "full"
+        ],
+        "type": "string"
+      },
+      "StorageWarningResponse": {
+        "properties": {
+          "shownLevel": {
+            "$ref": "#/components/schemas/StorageWarningLevel"
+          }
+        },
+        "required": [
+          "shownLevel"
+        ],
+        "type": "object"
+      },
+      "StorageWarningUpdate": {
+        "properties": {
+          "shownLevel": {
+            "$ref": "#/components/schemas/StorageWarningLevel"
+          }
+        },
+        "type": "object"
+      },
       "StringFilter": {
         "properties": {
           "eq": {
@@ -33571,6 +33599,9 @@
           "sharedLinks": {
             "$ref": "#/components/schemas/SharedLinksResponse"
           },
+          "storageWarning": {
+            "$ref": "#/components/schemas/StorageWarningResponse"
+          },
           "tags": {
             "$ref": "#/components/schemas/TagsResponse"
           },
@@ -33590,6 +33621,7 @@
           "ratings",
           "recentlyAdded",
           "sharedLinks",
+          "storageWarning",
           "tags",
           "telemetry"
         ],
@@ -33632,6 +33664,9 @@
           },
           "sharedLinks": {
             "$ref": "#/components/schemas/SharedLinksUpdate"
+          },
+          "storageWarning": {
+            "$ref": "#/components/schemas/StorageWarningUpdate"
           },
           "tags": {
             "$ref": "#/components/schemas/TagsUpdate"
