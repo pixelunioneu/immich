@@ -132,5 +132,9 @@
     >
       {$t('support_and_feedback')}
     </button>
+
+    <a href={Route.referral()} onclick={onClose} class="mt-2 text-center text-xs text-primary underline">
+      {$t('invite_a_friend')}
+    </a>
   </div>
 </div>
