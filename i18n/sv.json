@@ -1232,6 +1232,7 @@
   "google_photos_migration_reset": "Återställ migration",
   "google_photos_migration_reset_failed": "Kunde inte återställa migrationen",
   "google_photos_migration_results": "Migreringsresultat",
+  "google_photos_migration_retention_notice": "Uppladdningar och migrationer utan aktivitet på 60 dagar raderas automatiskt. Vi mejlar dig 3 dagar innan.",
   "google_photos_migration_running_duration_hint": "Detta steg kan ta lång tid beroende på storleken på din import. Du kan stänga denna sida och komma tillbaka senare—migrationen fortsätter i bakgrunden.",
   "google_photos_migration_running_text": "Din migration pågår på våra servrar. Denna sida uppdateras automatiskt.",
   "google_photos_migration_running_title": "Pågår",

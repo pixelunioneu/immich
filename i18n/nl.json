@@ -1239,6 +1239,7 @@
   "google_photos_migration_reset": "Migratie resetten",
   "google_photos_migration_reset_failed": "Migratie resetten mislukt",
   "google_photos_migration_results": "Migratieresultaten",
+  "google_photos_migration_retention_notice": "Uploads en migraties zonder activiteit in de afgelopen 60 dagen worden automatisch verwijderd. We sturen je 3 dagen van tevoren een e-mail.",
   "google_photos_migration_running_duration_hint": "Deze fase kan lang duren afhankelijk van de omvang van uw import. U kunt dit tabblad of venster sluiten en later terugkomen—de migratie gaat op de achtergrond door.",
   "google_photos_migration_running_text": "Je migratie is bezig op onze servers. Deze pagina wordt automatisch bijgewerkt.",
   "google_photos_migration_running_title": "Bezig",

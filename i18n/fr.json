@@ -1239,6 +1239,7 @@
   "google_photos_migration_reset": "Réinitialiser la migration",
   "google_photos_migration_reset_failed": "Impossible de réinitialiser la migration",
   "google_photos_migration_results": "Résultats de la migration",
+  "google_photos_migration_retention_notice": "Les téléversements et migrations sans activité depuis 60 jours sont supprimés automatiquement. Nous vous enverrons un e-mail 3 jours avant.",
   "google_photos_migration_running_duration_hint": "Cette étape peut prendre beaucoup de temps selon la taille de votre import. Vous pouvez fermer cette page et revenir plus tard—la migration continuera en arrière-plan.",
   "google_photos_migration_running_text": "Votre migration est en cours sur nos serveurs. Cette page se met à jour automatiquement.",
   "google_photos_migration_running_title": "En cours",

@@ -1239,6 +1239,7 @@
   "google_photos_migration_reset": "Resetuj migrację",
   "google_photos_migration_reset_failed": "Nie udało się zresetować migracji",
   "google_photos_migration_results": "Wyniki migracji",
+  "google_photos_migration_retention_notice": "Przesłane pliki i migracje bez aktywności przez 60 dni są usuwane automatycznie. Wyślemy Ci e-mail 3 dni wcześniej.",
   "google_photos_migration_running_duration_hint": "Ten etap może trwać bardzo długo w zależności od rozmiaru importu. Możesz zamknąć tę stronę i wrócić później—migracja będzie kontynuowana w tle.",
   "google_photos_migration_running_text": "Twoja migracja jest w toku na naszych serwerach. Ta strona odświeża się automatycznie.",
   "google_photos_migration_running_title": "W trakcie",

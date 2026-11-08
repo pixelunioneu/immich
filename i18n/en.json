@@ -1240,6 +1240,7 @@
   "google_photos_migration_reset": "Reset migration",
   "google_photos_migration_reset_failed": "Unable to reset migration",
   "google_photos_migration_results": "Migration results",
+  "google_photos_migration_retention_notice": "Uploads and migrations without activity for 60 days are deleted automatically. We'll email you 3 days before.",
   "google_photos_migration_running_duration_hint": "This stage can take a long time depending on the size of your import. You may close this page and come back later—the migration will continue in the background.",
   "google_photos_migration_running_text": "Your migration is running on our servers. This page updates automatically.",
   "google_photos_migration_running_title": "Running",

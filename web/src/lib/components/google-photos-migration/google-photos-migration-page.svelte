@@ -336,8 +336,11 @@
 
 <UserPageLayout {title}>
   <div class="w-full max-w-3xl mx-auto px-4 py-6">
-    <p class="mb-6 text-sm text-immich-fg/75 dark:text-immich-dark-fg/75">
+    <p class="mb-1 text-sm text-immich-fg/75 dark:text-immich-dark-fg/75">
       {$t('google_photos_migration_subtitle')}
+    </p>
+    <p class="mb-6 text-xs text-immich-fg/60 dark:text-immich-dark-fg/60">
+      {$t('google_photos_migration_retention_notice')}
     </p>
 
     {#if needsReauth}
