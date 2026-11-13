@@ -99,7 +99,7 @@
     card.style.cssText = [
       'position:fixed',
       'z-index:2147483000',
-      small ? 'left:12px;right:12px;bottom:12px' : 'right:20px;bottom:84px;width:' + cfg.width + 'px',
+      small ? 'left:12px;right:12px;bottom:12px' : 'right:20px;bottom:20px;width:' + cfg.width + 'px',
       'height:min(' + cfg.height + 'px,80vh)',
       'overflow:hidden',
       'border-radius:14px',
