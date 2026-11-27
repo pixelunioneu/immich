@@ -1,0 +1,50 @@
+name: Docker PU Build Check
+
+# Builds the fork's own images on every PR and push to main, without pushing,
+# so a broken Dockerfile shows up before a release tag. Same Dockerfile, build
+# context and (absent) build args as the web and frontdoor jobs in
+# docker-pu.yml. Upstream's docker.yml already builds the server image on PRs.
+# Only linux/amd64; the release also builds linux/arm64.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: docker-pu-pr-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: immich-web
+            dockerfile: Dockerfile.pu
+          - image: immich-frontdoor
+            dockerfile: packages/frontdoor/Dockerfile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

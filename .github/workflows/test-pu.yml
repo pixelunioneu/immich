@@ -1,10 +1,23 @@
 name: Test PU
 
-# Reusable suite for the fork's release pipeline. Upstream's test.yml is not
-# present in this fork, so these are the only runs of the server and web tests
-# in CI. The frontdoor has its own suite in frontdoor.yml.
+# The fork's server and web suite. Upstream's test.yml is not present in this
+# fork, so these are the only runs of the server and web tests in CI. It runs on
+# every PR and push to main, and docker-pu.yml calls it to gate the release
+# build on a tag. The frontdoor has its own suite in frontdoor.yml, the mobile
+# fork tests theirs in test-pu-mobile.yml.
 on:
   workflow_call:
+  pull_request:
+  push:
+    branches: [main]
+
+# A literal prefix, not github.workflow: when docker-pu.yml calls this file,
+# github.workflow is "Docker PU" and the group would be the caller's own,
+# cancelling or deadlocking the release run. The event name keeps a dispatched
+# release run on main apart from push runs on main. Only PR runs are cancelled.
+concurrency:
+  group: test-pu-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 

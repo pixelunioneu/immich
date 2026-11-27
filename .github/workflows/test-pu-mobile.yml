@@ -1,0 +1,50 @@
+name: Test PU Mobile
+
+# The fork's own mobile tests. Upstream's mobile CI is disabled in this fork
+# (.github/disabled/test.yml), so this runs only the fork's test files, not the
+# whole suite. The setup mirrors upstream's mobile-unit-tests job. Kept out of
+# test-pu.yml so it does not gate the server and web image release.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: test-pu-mobile-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  mobile-unit:
+    name: Mobile Fork Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: ./mobile
+
+      - name: Install dependencies
+        run: mise //mobile:install:ci
+
+      # The generated OpenAPI client, Drift, freezed and translation code are not
+      # committed; the tests do not compile without them.
+      - name: Perform codegen
+        run: mise //mobile:codegen
+
+      - name: Run fork tests
+        working-directory: ./mobile
+        run: >-
+          mise x -- flutter test
+          test/providers/pu/pu_auth_provider_test.dart
+          test/services/pu_login.service_test.dart
+          test/widgets/pu/pu_login_form_test.dart
