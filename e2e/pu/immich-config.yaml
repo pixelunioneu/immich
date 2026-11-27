@@ -1,0 +1,12 @@
+# PixelUnion e2e: Immich config file for the fork's stack (IMMICH_CONFIG_FILE).
+# Login is OIDC-only, as on a hosted tenant. The issuer is the local e2e-auth-server mock.
+oauth:
+  enabled: true
+  issuerUrl: http://e2e-auth-server:2286/.well-known/openid-configuration
+  clientId: client-pixelunion
+  clientSecret: client-pixelunion
+  allowInsecureRequests: true
+  autoRegister: true
+  buttonText: Login with PixelUnion
+passwordLogin:
+  enabled: false

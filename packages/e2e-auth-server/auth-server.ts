@@ -12,6 +12,8 @@ export enum OAuthClient {
   DEFAULT = 'client-default',
   RS256_TOKENS = 'client-RS256-tokens',
   RS256_PROFILE = 'client-RS256-profile',
+  // PixelUnion: a Keycloak-like client that is issued refresh tokens, for the fork's OIDC token bridge
+  PIXELUNION = 'client-pixelunion',
 }
 
 export enum OAuthUser {
@@ -139,6 +141,10 @@ const setup = async () => {
       jwtUserinfo: {
         enabled: true,
       },
+      // PixelUnion: the fork revokes the stored refresh token on logout
+      revocation: {
+        enabled: true,
+      },
     },
     cookies: {
       names: {
@@ -148,6 +154,10 @@ const setup = async () => {
       },
     },
     conformIdTokenClaims: false,
+    // PixelUnion: Keycloak issues a refresh token on every code exchange, without `offline_access`.
+    // Only the PIXELUNION client is allowed the refresh_token grant, so the other clients are unchanged.
+    issueRefreshToken: (_ctx, client) =>
+      client.clientId === OAuthClient.PIXELUNION,
     pkce: {
       required: () => false,
     },
@@ -175,6 +185,13 @@ const setup = async () => {
         grant_types: ['authorization_code'],
         userinfo_signed_response_alg: 'RS256',
         jwks: { keys: [await exportJWK(publicKey)] },
+      },
+      {
+        client_id: OAuthClient.PIXELUNION,
+        client_secret: OAuthClient.PIXELUNION,
+        redirect_uris: [...redirectUris, 'http://127.0.0.1:2287/auth/login'],
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
       },
     ],
   });

@@ -1,0 +1,60 @@
+# PixelUnion fork e2e stack. Layered on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.pu.yml up
+#
+# Use `mise run //e2e:pu-up` (see pu/compose.sh), which also sets FRONTDOOR_IMMICH_VERSION.
+# Everything runs against local containers; nothing here talks to a real PixelUnion service.
+
+services:
+  immich-server:
+    environment:
+      # OAuth (against e2e-auth-server) and password login are configured from a file,
+      # because the fork blocks /api/system-config and /api/admin/config.
+      IMMICH_CONFIG_FILE: /pu/immich-config.yaml
+      # Test-only key for the OIDC token bridge (64 hex chars). Not used anywhere else.
+      IMMICH_KEYCLOAK_TOKEN_ENCRYPTION_KEY: '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
+    volumes:
+      - ./pu/immich-config.yaml:/pu/immich-config.yaml:ro
+    depends_on:
+      e2e-auth-server:
+        condition: service_started
+
+  # The fork's web image, built the same way as for release.
+  immich-web:
+    container_name: immich-e2e-web
+    image: immich-web-pu:e2e
+    build:
+      context: ../
+      dockerfile: Dockerfile.pu
+    volumes:
+      # Test stand-in for the routing in front of the web image: SPA fallback plus /api to the server.
+      - ./pu/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - immich-server
+    ports:
+      - 2287:80
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1/ > /dev/null || exit 1']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  frontdoor:
+    container_name: immich-e2e-frontdoor
+    image: immich-frontdoor-pu:e2e
+    build:
+      context: ../
+      dockerfile: packages/frontdoor/Dockerfile
+    environment:
+      FRONTDOOR_PORT: '8080'
+      FRONTDOOR_DATABASE_URL: postgres://postgres:postgres@database:5432
+      # The tenant is the first label of the Host header: `immich.e2e.test` -> database `immich`.
+      FRONTDOOR_BASE_DOMAIN: e2e.test
+      FRONTDOOR_UPSTREAM_URL: http://immich-server:2285
+      # Set from server/package.json by pu/compose.sh, as a deployment sets it from the server image.
+      FRONTDOOR_IMMICH_VERSION: ${FRONTDOOR_IMMICH_VERSION:?run through e2e/pu/compose.sh}
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - 2288:8080
