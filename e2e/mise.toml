@@ -58,3 +58,30 @@ run = [
   { task = ":lint" },
   { task = ":check" },
 ]
+
+# PixelUnion fork e2e suite (docker-compose.pu.yml, vitest.pu.config.ts, playwright.pu.config.ts).
+# Upstream's own e2e specs cannot run on the fork (password sign-up, /api/system-config).
+[tasks."test-pu"]
+description = "Build the fork images, start the fork stack, run the fork e2e specs, stop the stack"
+depends = [":install", ":pu-playwright-install"]
+run = "./pu/run-suite.sh"
+
+[tasks."pu-up"]
+run = "./pu/compose.sh up -d --build --wait --wait-timeout 300 --renew-anon-volumes --force-recreate --remove-orphans"
+
+[tasks."pu-down"]
+run = "./pu/compose.sh down -v --remove-orphans"
+
+[tasks."test-pu-api"]
+description = "Run the fork API e2e specs against a running fork stack (mise run //e2e:pu-up)"
+env._.path = "./node_modules/.bin"
+run = "vitest --run --config vitest.pu.config.ts"
+
+[tasks."test-pu-web"]
+description = "Run the fork web e2e specs against a running fork stack (mise run //e2e:pu-up)"
+env._.path = "./node_modules/.bin"
+run = "playwright test --config playwright.pu.config.ts"
+
+[tasks."pu-playwright-install"]
+env._.path = "./node_modules/.bin"
+run = "playwright install --with-deps chromium"

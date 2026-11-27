@@ -1,0 +1,42 @@
+name: E2E PU
+
+# The fork's own end-to-end suite (e2e/docker-compose.pu.yml, e2e/src/specs/pu). It
+# builds the server, the nginx web image (Dockerfile.pu) and the frontdoor, and runs
+# them with Postgres, Valkey and the e2e-auth-server OIDC mock: OIDC login, the token
+# bridge, blocked routes, disabled restore, the frontdoor version, the upgrade path from
+# the last fork release, and the login page. Upstream's e2e specs cannot run on the fork.
+# Callable so the release workflow can gate on it.
+on:
+  workflow_call:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-pu-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  e2e:
+    name: Fork E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      # The fork specs need no files from the e2e/test-assets submodule.
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # install, Chromium, docker compose build + up --wait, vitest, playwright, down
+      - name: Run fork e2e suite
+        run: mise run //e2e:test-pu
