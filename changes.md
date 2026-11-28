@@ -54,5 +54,6 @@ The numbers are local to this file. The Notion page "Immich Fork: PixelUnion Cha
 4. Check both ways:
    - `git diff --name-only vX.Y.Z HEAD` lists only fork files, or new ones you can explain.
    - Every file in `git diff --name-only <previous upstream tag> main` still differs from upstream, or you can explain why not.
+   - The web app calls no blocked route outside the admin pages: search the upstream web diff for new callers of the SDK functions behind `BLOCKED_ROUTE_PREFIXES` (for example `getAdminConfig`). In v3.4 upstream started to load the admin config when an admin's session is set up; the fork removes that in `web/src/lib/managers/auth-manager.svelte.ts`.
 5. Run all suites: server unit and medium, web unit, frontdoor, the mobile `pu` tests and `mise run //e2e:test-pu`. Two tests go red on purpose when upstream adds something: the controller snapshot (`pu-blocked-route.guard.spec.ts`) and the frontdoor version parity test.
 6. Update the Notion page and this file.

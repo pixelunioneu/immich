@@ -1,6 +1,5 @@
 import { eventManager } from '#lib/managers/event-manager.svelte.ts';
 import { queryClient } from '#lib/queries/client.ts';
-import { getAdminConfigQuery } from '#lib/queries/config-admin.query.ts';
 import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
 import { getAboutInfoQuery } from '#lib/queries/server-info.query.ts';
 import { Route } from '#lib/route.ts';
@@ -69,9 +68,8 @@ class AuthManager {
         getMyPreferences(),
         queryClient.query(getUserConfigQuery()),
       ]);
-      if (user.isAdmin) {
-        await queryClient.query(getAdminConfigQuery());
-      }
+      // PixelUnion: upstream preloads the admin config here for admins. /api/admin/config is a
+      // blocked route on this fork (404), and a failed preload would leave the admin signed out.
       this.#preferences = preferences;
       this.#user = user;
 
