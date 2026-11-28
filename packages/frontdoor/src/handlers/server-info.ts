@@ -11,7 +11,11 @@ import { parseVersion } from '../config.js';
  */
 export const buildServerInfo = (immichVersion: string) => ({
   ping: { res: 'pong' },
-  version: parseVersion(immichVersion),
+  // Mirrors `ServerVersionResponseDto.fromSemVer`, which adds the feature level.
+  version: {
+    ...parseVersion(immichVersion),
+    featureLevel: contract.serverFeatureLevel,
+  },
   mediaTypes: contract.mediaTypes,
 });
 

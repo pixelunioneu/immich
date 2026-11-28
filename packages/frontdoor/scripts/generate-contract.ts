@@ -18,7 +18,7 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SyncRequestType } from 'src/enum';
+import { ServerFeatureLevel, SyncRequestType } from 'src/enum';
 import { mimeTypes } from 'src/utils/mime-types';
 
 const contract = {
@@ -32,6 +32,13 @@ const contract = {
   // `streamInternal` itself silently skips unknown types, so the front door has
   // to reject them the way the controller would before deciding anything.
   syncRequestTypes: Object.values(SyncRequestType),
+  // Mirrors `serverFeatureLevel` in src/dtos/server.dto.ts: the highest level the server
+  // knows. `/api/server/version` reports it since v3.4, and mobile clients read it.
+  serverFeatureLevel: Math.max(
+    ...Object.values(ServerFeatureLevel).filter(
+      (value) => typeof value === 'number',
+    ),
+  ),
 };
 
 const target = join(
