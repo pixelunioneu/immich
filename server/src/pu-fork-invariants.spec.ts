@@ -189,6 +189,13 @@ describe('PixelUnion fork invariants', () => {
     });
   });
 
+  // Sentry loads first and sets up OpenTelemetry. With two copies of the API package, Immich
+  // cannot register its meter provider after it, and the Prometheus metrics come out empty.
+  it('pnpm-lock.yaml has one @opentelemetry/api version (Sentry and Immich share its global registry)', () => {
+    const versions = new Set(read('pnpm-lock.yaml').match(/^ {2}'@opentelemetry\/api@[^':(]+/gm));
+    expect([...versions]).toHaveLength(1);
+  });
+
   describe('web branding', () => {
     it('does not import the Immich Logo component', () => {
       const offenders = walk(join(repoRoot, 'web', 'src'), ['.svelte', '.ts'])

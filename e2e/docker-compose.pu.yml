@@ -13,6 +13,15 @@ services:
       IMMICH_CONFIG_FILE: /pu/immich-config.yaml
       # Test-only key for the OIDC token bridge (64 hex chars). Not used anywhere else.
       IMMICH_KEYCLOAK_TOKEN_ENCRYPTION_KEY: '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
+      # Sentry on, with a DSN that goes nowhere: the server must start and still export its
+      # Prometheus metrics with Sentry initialised (see pu-sentry-metrics.e2e-spec.ts).
+      SENTRY_DSN: http://public@127.0.0.1:9/1
+      # Upstream v3.4.2 answers 400 on the metrics port when no listen host is set (it builds
+      # an invalid URL from the default "::"). Fixed upstream after v3.4.2; drop this line then.
+      IMMICH_HOST: 0.0.0.0
+    ports:
+      # API metrics (Prometheus)
+      - 2289:8081
     volumes:
       - ./pu/immich-config.yaml:/pu/immich-config.yaml:ro
     depends_on:

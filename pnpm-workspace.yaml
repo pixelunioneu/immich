@@ -35,6 +35,11 @@ overrides:
   sharp: ^0.35.3
   # 1.9.3-1.9.5 are confirmed broken
   tsc-alias: 1.9.9
+  # PixelUnion: one OpenTelemetry API for the whole workspace. Sentry's SDK still pulls in
+  # 1.9.x next to Immich's 1.10.x; two copies cannot share the global registry, so with
+  # SENTRY_DSN set the server's Prometheus metrics came out empty, and web's vitest got a
+  # second instance. Drop this once Sentry supports @opentelemetry/api 1.10.
+  '@opentelemetry/api': 1.10.0
 packageExtensions:
   nestjs-kysely:
     dependencies:

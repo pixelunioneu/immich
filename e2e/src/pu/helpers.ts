@@ -17,6 +17,7 @@ export const baseUrl = `http://${host}:2285`;
 export const app = `${baseUrl}/api`;
 export const webUrl = `http://${host}:2287`;
 export const frontdoorUrl = `http://${host}:2288`;
+export const metricsUrl = `http://${host}:2289`;
 /** The front door takes the tenant from the Host header; `immich` maps to the e2e database. */
 export const frontdoorTenantHost = 'immich.e2e.test';
 export const dbUrl = `postgres://postgres:postgres@${host}:5435/immich`;
