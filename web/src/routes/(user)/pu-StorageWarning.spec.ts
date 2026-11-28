@@ -1,7 +1,7 @@
 import { StorageWarningLevel } from '@immich/sdk';
 import { render } from '@testing-library/svelte';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { authManager } from '$lib/managers/auth-manager.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
 import { userInteraction } from '$lib/stores/user.svelte';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
@@ -9,7 +9,7 @@ import StorageWarning from './StorageWarning.svelte';
 
 const modal = vi.hoisted(() => ({ open: vi.fn() }));
 
-vi.mock('$lib/utils/storage-warning-modal', () => ({ openStorageWarningModal: modal.open }));
+vi.mock('#lib/utils/storage-warning-modal.ts', () => ({ openStorageWarningModal: modal.open }));
 
 const { None, AlmostFull, Full } = StorageWarningLevel;
 

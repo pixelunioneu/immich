@@ -1,4 +1,4 @@
-import { getReferral } from '$lib/services/pu-referral.service';
+import { getReferral } from '#lib/services/pu-referral.service.ts';
 
 const PRD_BASE = 'https://api.prd.tech.pixelunion.eu/api/referral';
 const NONPRD_BASE = 'https://api.nonprd.tech.pixelunion.eu/api/referral';

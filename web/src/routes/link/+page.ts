@@ -23,10 +23,6 @@ export const load = (({ url }) => {
       return redirect(307, Route.userSettings({ isOpen: OpenQueryParam.NOTIFICATIONS }));
     }
 
-    case LinkTarget.BACKUPS: {
-      return redirect(307, Route.backups());
-    }
-
     case LinkTarget.VIEW_ASSET: {
       const id = queryParams.get('id');
       if (id) {

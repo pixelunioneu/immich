@@ -1,4 +1,4 @@
-import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
 const jsonResponse = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Content-Type': 'application/json' } });

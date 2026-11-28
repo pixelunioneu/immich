@@ -4,7 +4,7 @@ import { userAdminFactory } from '@test-data/factories/user-factory';
 
 const env = vi.hoisted(() => ({ PUBLIC_SENTRY_DSN: '' }));
 
-vi.mock('$env/static/public', () => env);
+vi.mock('$app/env/public', () => env);
 
 vi.mock('@sentry/sveltekit', () => {
   const close = vi.fn();
@@ -22,9 +22,9 @@ const withTelemetry = (enabled: boolean) => preferencesFactory.build({ telemetry
 const load = async (dsn: string) => {
   env.PUBLIC_SENTRY_DSN = dsn;
   vi.resetModules();
-  const { authManager } = await import('$lib/managers/auth-manager.svelte');
-  const { eventManager } = await import('$lib/managers/event-manager.svelte');
-  const { sentryManager } = await import('$lib/managers/sentry-manager.svelte');
+  const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
+  const { eventManager } = await import('#lib/managers/event-manager.svelte.ts');
+  const { sentryManager } = await import('#lib/managers/sentry-manager.svelte.ts');
   return { authManager, eventManager, sentryManager };
 };
 
@@ -85,11 +85,11 @@ describe('SentryManager', () => {
   it('initializes at import time when already logged in with consent', async () => {
     env.PUBLIC_SENTRY_DSN = 'https://dsn.test/1';
     vi.resetModules();
-    const { authManager } = await import('$lib/managers/auth-manager.svelte');
+    const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
     authManager.setUser(user);
     authManager.setPreferences(withTelemetry(true));
 
-    await import('$lib/managers/sentry-manager.svelte');
+    await import('#lib/managers/sentry-manager.svelte.ts');
 
     expect(Sentry.init).toHaveBeenCalledTimes(1);
   });

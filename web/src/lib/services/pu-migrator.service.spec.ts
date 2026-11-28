@@ -1,4 +1,4 @@
-import { PuReauthRequiredError } from '$lib/services/pu-email-change';
+import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
 import {
   createMigration,
   getMigration,
@@ -8,10 +8,10 @@ import {
   MigratorApiError,
   startMigration,
   validateCredentials,
-} from '$lib/services/pu-migrator.service';
-import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+} from '#lib/services/pu-migrator.service.ts';
+import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
-vi.mock('$lib/utils/pu-oidc', () => ({
+vi.mock('#lib/utils/pu-oidc.ts', () => ({
   getPuOidcAccessToken: vi.fn(),
   clearPuOidcAccessTokenCache: vi.fn(),
 }));

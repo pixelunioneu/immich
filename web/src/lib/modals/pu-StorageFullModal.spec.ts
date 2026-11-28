@@ -2,10 +2,10 @@ import { StorageWarningLevel } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { locale } from '$lib/stores/preferences.store';
-import { PU_BILLING_PORTAL_URL } from '$lib/utils/pu-api';
-import { openStorageWarningModal } from '$lib/utils/storage-warning-modal';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { locale } from '#lib/stores/preferences.store.ts';
+import { PU_BILLING_PORTAL_URL } from '#lib/utils/pu-api.ts';
+import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
 import StorageFullModal from './StorageFullModal.svelte';
@@ -13,8 +13,8 @@ import StorageFullModal from './StorageFullModal.svelte';
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
 // Keep the real eligibility rule; only the network lookup is faked.
-vi.mock('$lib/services/pu-referral.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/services/pu-referral.service')>()),
+vi.mock('#lib/services/pu-referral.service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/services/pu-referral.service.ts')>()),
   loadReferral: referral.loadReferral,
 }));
 

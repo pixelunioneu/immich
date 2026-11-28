@@ -4,9 +4,9 @@
     PuEmailChangeError,
     PuReauthRequiredError,
     requestEmailChange,
-  } from '$lib/services/pu-email-change';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { clearPuOidcAccessTokenCache } from '$lib/utils/pu-oidc';
+  } from '#lib/services/pu-email-change.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { clearPuOidcAccessTokenCache } from '#lib/utils/pu-oidc.ts';
   import { Button, Field, Input, toastManager } from '@immich/ui';
   import { fade } from 'svelte/transition';
 

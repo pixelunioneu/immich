@@ -1,10 +1,10 @@
 <script lang="ts">
-  import PixelUnionLogo from '$lib/components/shared-components/pixelunion-logo.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getByteUnitString } from '$lib/utils/byte-units';
-  import { PU_BILLING_PORTAL_URL } from '$lib/utils/pu-api';
-  import { STORAGE_METER_THRESHOLDS } from '$lib/utils/storage-warning';
+  import PixelUnionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
+  import { PU_BILLING_PORTAL_URL } from '#lib/utils/pu-api.ts';
+  import { STORAGE_METER_THRESHOLDS } from '#lib/utils/storage-warning.ts';
   import { StorageWarningLevel } from '@immich/sdk';
   import { Button, CloseButton, Icon, Meter, Modal, ModalBody, ModalFooter, ModalHeader } from '@immich/ui';
   import { mdiAccountTie, mdiArrowUpBoldCircleOutline, mdiBroom, mdiChevronRight, mdiGiftOutline } from '@mdi/js';

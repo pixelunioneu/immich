@@ -13,7 +13,7 @@ import {
   MIGRATION_API_KEY_NAME,
   MIGRATION_API_KEY_PERMISSIONS,
   storeMigrationApiKeyId,
-} from '$lib/services/pu-migration-apikey';
+} from '#lib/services/pu-migration-apikey.ts';
 
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),

@@ -1,5 +1,5 @@
-import { PUBLIC_API_URL } from '$env/static/public';
-import { getFormatter } from '$lib/utils/i18n';
+import { PUBLIC_API_URL } from '$app/env/public';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ url, fetch }) => {

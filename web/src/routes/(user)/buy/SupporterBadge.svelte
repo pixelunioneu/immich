@@ -1,5 +1,5 @@
 <script lang="ts">
-  import PixelUnionLogo from '$lib/components/shared-components/pixelunion-logo.svelte';
+  import PixelUnionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
   import { t } from 'svelte-i18n';
 
   interface Props {

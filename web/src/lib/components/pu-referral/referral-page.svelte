@@ -1,7 +1,7 @@
 <script lang="ts">
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { getReferral, type ReferralResult } from '$lib/services/pu-referral.service';
-  import { copyToClipboard } from '$lib/utils';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { getReferral, type ReferralResult } from '#lib/services/pu-referral.service.ts';
+  import { copyToClipboard } from '#lib/utils.ts';
   import { Alert, Button, HStack, Icon, Input, LoadingSpinner } from '@immich/ui';
   import { mdiContentCopy, mdiOpenInNew, mdiShareVariant } from '@mdi/js';
   import { onMount } from 'svelte';

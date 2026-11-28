@@ -1,28 +1,28 @@
 import { toastManager } from '@immich/ui';
 import { get } from 'svelte/store';
-import { PuReauthRequiredError } from '$lib/services/pu-email-change';
+import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
 import {
   enqueueMigrationUploads,
   formatMigrationUploadBytes,
   retryMigrationUpload,
-} from '$lib/services/pu-migration-uploader';
-import { getMigrationUploadAuthHeader, MigratorApiError } from '$lib/services/pu-migrator.service';
-import { migrationUploadStore, MigrationUploadState } from '$lib/stores/migration-upload';
-import { uploadRequest } from '$lib/utils';
-import { clearPuOidcAccessTokenCache } from '$lib/utils/pu-oidc';
+} from '#lib/services/pu-migration-uploader.ts';
+import { getMigrationUploadAuthHeader, MigratorApiError } from '#lib/services/pu-migrator.service.ts';
+import { migrationUploadStore, MigrationUploadState } from '#lib/stores/migration-upload.ts';
+import { uploadRequest } from '#lib/utils.ts';
+import { clearPuOidcAccessTokenCache } from '#lib/utils/pu-oidc.ts';
 
-vi.mock('$lib/utils', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils')>()),
+vi.mock('#lib/utils.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils.ts')>()),
   uploadRequest: vi.fn(),
 }));
 
-vi.mock('$lib/utils/pu-oidc', () => ({
+vi.mock('#lib/utils/pu-oidc.ts', () => ({
   getPuOidcAccessToken: vi.fn(),
   clearPuOidcAccessTokenCache: vi.fn(),
 }));
 
-vi.mock('$lib/services/pu-migrator.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/services/pu-migrator.service')>()),
+vi.mock('#lib/services/pu-migrator.service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/services/pu-migrator.service.ts')>()),
   getMigrationUploadUrl: () => 'https://migrator.test/upload',
   getMigrationUploadAuthHeader: vi.fn(),
 }));

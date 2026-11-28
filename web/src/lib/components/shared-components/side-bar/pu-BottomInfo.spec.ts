@@ -2,8 +2,8 @@ import type { ServerAboutResponseDto, ServerStorageResponseDto } from '@immich/s
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { locale } from '$lib/stores/preferences.store';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { locale } from '#lib/stores/preferences.store.ts';
 import { userInteraction } from '$lib/stores/user.svelte';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
@@ -11,14 +11,14 @@ import BottomInfo from './BottomInfo.svelte';
 
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
-vi.mock('$lib/services/pu-referral.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/services/pu-referral.service')>()),
+vi.mock('#lib/services/pu-referral.service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/services/pu-referral.service.ts')>()),
   loadReferral: referral.loadReferral,
 }));
 
 // Upstream (v3.4) shows a FUTO Backups sidebar item to admins when this flag is on; turn every flag on
 // so the test catches that item if a merge brings it in.
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     init: vi.fn(),
     loadFeatureFlags: vi.fn(),

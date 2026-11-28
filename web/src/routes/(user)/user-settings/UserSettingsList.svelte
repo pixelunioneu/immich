@@ -21,7 +21,7 @@
     mdiShieldLockOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import { PUBLIC_SENTRY_DSN } from '$env/static/public';
+  import { PUBLIC_SENTRY_DSN } from '$app/env/public';
   import AppSettings from './AppSettings.svelte';
   import ChangePasswordSettings from './ChangePasswordSettings.svelte';
   import DeviceList from './DeviceList.svelte';

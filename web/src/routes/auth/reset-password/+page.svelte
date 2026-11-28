@@ -1,11 +1,11 @@
 <script lang="ts">
-  import AuthPageLayout from '$lib/components/layouts/AuthPageLayout.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import AuthPageLayout from '#lib/components/layouts/AuthPageLayout.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { updateMyUser } from '@immich/sdk';
   import { Alert, Button, Field, HelperText, Input, Stack, Text } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
-  import { PUBLIC_API_URL } from '$env/static/public';
+  import { PUBLIC_API_URL } from '$app/env/public';
 
   interface Props {
     data: PageData;

@@ -1,6 +1,5 @@
-import { StorageWarningLevel } from '@immich/sdk';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userInteraction } from '$lib/stores/user.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { StorageWarningLevel, type ServerStorageResponseDto } from '@immich/sdk';
 
 export const STORAGE_ALMOST_FULL_RATIO = 0.8;
 export const STORAGE_FULL_RATIO = 0.95;
@@ -16,8 +15,11 @@ export type StorageUsage = { usedBytes: number; totalBytes: number };
 /**
  * What the storage meter shows: the user's quota if they have one, or else the server disk.
  * `undefined` until that is known. Reactive when called inside `$derived`.
+ *
+ * `serverInfo` is the result of `getStorageQuery` (`createQuery(getStorageQuery).data`); it is
+ * only used for users without a quota.
  */
-export function getStorageUsage(): StorageUsage | undefined {
+export function getStorageUsage(serverInfo: ServerStorageResponseDto | undefined): StorageUsage | undefined {
   if (!authManager.authenticated) {
     return undefined;
   }
@@ -25,7 +27,6 @@ export function getStorageUsage(): StorageUsage | undefined {
   if (quotaSizeInBytes !== null && quotaSizeInBytes !== undefined) {
     return { usedBytes: quotaUsageInBytes ?? 0, totalBytes: quotaSizeInBytes };
   }
-  const serverInfo = userInteraction.serverInfo;
   if (!serverInfo) {
     return undefined;
   }
@@ -53,8 +54,8 @@ export function getStorageLevel(usedBytes: number, totalBytes: number): StorageW
 }
 
 /** Level of the current storage usage; `none` while it is unknown. Reactive inside `$derived`. */
-export function getCurrentStorageLevel(): StorageWarningLevel {
-  const usage = getStorageUsage();
+export function getCurrentStorageLevel(serverInfo: ServerStorageResponseDto | undefined): StorageWarningLevel {
+  const usage = getStorageUsage(serverInfo);
   return usage ? getStorageLevel(usage.usedBytes, usage.totalBytes) : StorageWarningLevel.None;
 }
 

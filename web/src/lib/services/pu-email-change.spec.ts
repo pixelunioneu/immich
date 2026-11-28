@@ -4,10 +4,10 @@ import {
   PuEmailChangeError,
   PuReauthRequiredError,
   requestEmailChange,
-} from '$lib/services/pu-email-change';
-import { getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+} from '#lib/services/pu-email-change.ts';
+import { getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
-vi.mock('$lib/utils/pu-oidc', () => ({
+vi.mock('#lib/utils/pu-oidc.ts', () => ({
   getPuOidcAccessToken: vi.fn(),
   clearPuOidcAccessTokenCache: vi.fn(),
 }));

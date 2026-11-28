@@ -1,5 +1,5 @@
-import { env } from '$env/dynamic/public';
-import { getPuApiBaseUrl } from '$lib/utils/pu-api';
+import { PUBLIC_PU_FAKE_REFERRAL_ID } from '$app/env/public';
+import { getPuApiBaseUrl } from '#lib/utils/pu-api.ts';
 
 export interface Referral {
   referral_id: string;
@@ -19,7 +19,7 @@ export type ReferralResult = { status: 'ok'; referral: Referral } | { status: 'n
  */
 export async function getReferral(): Promise<ReferralResult> {
   // Dev builds only: the referral endpoint looks tenants up by host, which never matches localhost.
-  const fakeReferralId = import.meta.env.DEV ? env.PUBLIC_PU_FAKE_REFERRAL_ID : undefined;
+  const fakeReferralId = import.meta.env.DEV ? PUBLIC_PU_FAKE_REFERRAL_ID : undefined;
   if (fakeReferralId) {
     return {
       status: 'ok',

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { authManager } from '$lib/managers/auth-manager.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
 import { userInteraction } from '$lib/stores/user.svelte';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
@@ -9,8 +9,8 @@ import ReferralInfo from './ReferralInfo.svelte';
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
 // Keep the real eligibility rule (the 16 GiB cut-off is fork intent); only the network lookup is faked.
-vi.mock('$lib/services/pu-referral.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/services/pu-referral.service')>()),
+vi.mock('#lib/services/pu-referral.service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/services/pu-referral.service.ts')>()),
   loadReferral: referral.loadReferral,
 }));
 

@@ -4,7 +4,7 @@ import UserSettingsList from './UserSettingsList.svelte';
 const flags = vi.hoisted(() => ({ value: { oauth: false, passwordLogin: true } as Record<string, boolean> }));
 const env = vi.hoisted(() => ({ PUBLIC_SENTRY_DSN: '' }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     init: vi.fn(),
     loadFeatureFlags: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$env/static/public', () => env);
+vi.mock('$app/env/public', () => env);
 
 // The i18n test setup has no messages loaded, so accordion titles render as their translation keys.
 const has = (key: string) => screen.queryByText(key) !== null;

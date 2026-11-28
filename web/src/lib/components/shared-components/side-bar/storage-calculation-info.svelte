@@ -1,5 +1,5 @@
 <script lang="ts">
-  import StorageCalculationModal from '$lib/modals/StorageCalculationModal.svelte';
+  import StorageCalculationModal from '#lib/modals/StorageCalculationModal.svelte';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiHarddisk, mdiInformationOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

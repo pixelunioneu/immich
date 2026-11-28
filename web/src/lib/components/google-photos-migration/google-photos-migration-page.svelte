@@ -1,9 +1,9 @@
 <script lang="ts">
-  import GooglePhotosMigrationCancelHelpModal from '$lib/components/google-photos-migration/google-photos-migration-cancel-help-modal.svelte';
-  import GooglePhotosMigrationUpload from '$lib/components/google-photos-migration/google-photos-migration-upload.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { deleteMigrationApiKey, createMigrationApiKey } from '$lib/services/pu-migration-apikey';
-  import { PuReauthRequiredError } from '$lib/services/pu-email-change';
+  import GooglePhotosMigrationCancelHelpModal from '#lib/components/google-photos-migration/google-photos-migration-cancel-help-modal.svelte';
+  import GooglePhotosMigrationUpload from '#lib/components/google-photos-migration/google-photos-migration-upload.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { deleteMigrationApiKey, createMigrationApiKey } from '#lib/services/pu-migration-apikey.ts';
+  import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
   import {
     cancelMigration,
     createMigration,
@@ -19,9 +19,9 @@
     type EventReport,
     type Migration,
     type MigratorConfig,
-  } from '$lib/services/pu-migrator.service';
-  import { migrationUploadStore } from '$lib/stores/migration-upload';
-  import { locale } from '$lib/stores/preferences.store';
+  } from '#lib/services/pu-migrator.service.ts';
+  import { migrationUploadStore } from '#lib/stores/migration-upload.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import { Alert, Button, Icon, LoadingSpinner, modalManager, toastManager } from '@immich/ui';
   import { mdiAlertCircle, mdiCheckCircle, mdiInformationOutline } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';

@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { isReferralEligible, loadReferral } from '$lib/services/pu-referral.service';
-  import { Route } from '$lib/route';
-  import { getStorageUsage } from '$lib/utils/storage-warning';
+  import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { isReferralEligible, loadReferral } from '#lib/services/pu-referral.service.ts';
+  import { getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight, mdiGiftOutline } from '@mdi/js';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
 
+  const storageQuery = createQuery(getStorageQuery);
   // The same total the storage meter shows: the user's quota, or else the server disk size.
-  let eligible = $derived(isReferralEligible(getStorageUsage()?.totalBytes));
+  let eligible = $derived(isReferralEligible(getStorageUsage(storageQuery.data)?.totalBytes));
   let hasReferral = $state(false);
 
   $effect(() => {

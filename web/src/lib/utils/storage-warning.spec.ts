@@ -1,7 +1,7 @@
 import { StorageWarningLevel } from '@immich/sdk';
-import { authManager } from '$lib/managers/auth-manager.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
 import { userInteraction } from '$lib/stores/user.svelte';
-import { decideStorageWarning, getStorageLevel, getStorageUsage } from '$lib/utils/storage-warning';
+import { decideStorageWarning, getStorageLevel, getStorageUsage } from '#lib/utils/storage-warning.ts';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
 

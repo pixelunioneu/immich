@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ReferralPage from '$lib/components/pu-referral/referral-page.svelte';
+  import ReferralPage from '#lib/components/pu-referral/referral-page.svelte';
   import type { PageData } from './$types';
 
   interface Props {
