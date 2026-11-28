@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import type { Snippet } from 'svelte';
   import { page } from '$app/state';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import StorageWarning from './StorageWarning.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import type { Snippet } from 'svelte';
+
   interface Props {
     children?: Snippet;
   }

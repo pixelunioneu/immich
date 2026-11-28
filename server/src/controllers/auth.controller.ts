@@ -3,7 +3,6 @@ import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { Endpoint, HistoryBuilder } from 'src/decorators.js';
 import {
-  type AuthDto,
   AuthStatusResponseDto,
   ChangePasswordDto,
   LoginCredentialDto,
@@ -16,6 +15,7 @@ import {
   SessionUnlockDto,
   SignUpDto,
   ValidateAccessTokenResponseDto,
+  type AuthDto,
 } from 'src/dtos/auth.dto.js';
 import { UserAdminResponseDto } from 'src/dtos/user.dto.js';
 import { ApiTag, AuthType, ImmichCookie, Permission } from 'src/enum.js';

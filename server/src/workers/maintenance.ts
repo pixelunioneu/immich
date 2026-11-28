@@ -15,6 +15,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(MaintenanceModule, {
     bufferLogs: true,
+    // see comment in api.ts
+    moduleIdGeneratorAlgorithm: 'deep-hash',
     routeConflictPolicy: { duplicate: 'error' },
     routeResolutionStrategy: 'specificity',
   });

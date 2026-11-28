@@ -10,7 +10,7 @@
   let storageWarningShown = $derived(getCurrentStorageLevel() !== StorageWarningLevel.None);
 </script>
 
-<div class="mt-auto">
+<div class="ms-4 mt-auto overflow-hidden rounded-lg">
   <StorageSpace />
   <StorageWarningInfo />
   {#if !storageWarningShown}
