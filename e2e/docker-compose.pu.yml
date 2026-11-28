@@ -16,9 +16,6 @@ services:
       # Sentry on, with a DSN that goes nowhere: the server must start and still export its
       # Prometheus metrics with Sentry initialised (see pu-sentry-metrics.e2e-spec.ts).
       SENTRY_DSN: http://public@127.0.0.1:9/1
-      # Upstream v3.4.2 answers 400 on the metrics port when no listen host is set (it builds
-      # an invalid URL from the default "::"). Fixed upstream after v3.4.2; drop this line then.
-      IMMICH_HOST: 0.0.0.0
     ports:
       # API metrics (Prometheus)
       - 2289:8081
