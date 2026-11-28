@@ -1,8 +1,8 @@
 /**
- * PixelUnion fork e2e helpers. Kept apart from src/utils.ts on purpose: upstream's
- * helpers set up the first admin with password sign-up and configure OAuth through
- * /api/system-config, neither of which exists on the fork.
- */
+PixelUnion fork e2e helpers. Kept apart from src/utils.ts on purpose: upstream's
+helpers set up the first admin with password sign-up and configure OAuth through
+/api/system-config, neither of which exists on the fork.
+*/
 import { execFile, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -56,10 +56,10 @@ const redirect = async (url: string, cookies?: string[]) => {
 };
 
 /**
- * Drive the OIDC authorization code flow through the e2e-auth-server mock, the way a
- * browser would, and complete it at /api/oauth/callback. Mirrors upstream's
- * oauth.e2e-spec.ts, which is the reference for the mock's interaction pages.
- */
+Drive the OIDC authorization code flow through the e2e-auth-server mock, the way a
+browser would, and complete it at /api/oauth/callback. Mirrors upstream's
+oauth.e2e-spec.ts, which is the reference for the mock's interaction pages.
+*/
 export const loginWithOAuth = async (sub: string): Promise<LoginResponse> => {
   const redirectUri = `${baseUrl}/auth/login`;
   const state = randomBytes(16).toString('base64url');
@@ -178,10 +178,10 @@ export const waitFor = async (
 };
 
 /**
- * Pull a `export const NAME = [ '...', ... ];` string array out of a TypeScript source file.
- * The e2e package cannot import server code (it has none of the server's dependencies),
- * so the specs read the list from source and follow it when it changes.
- */
+Pull a `export const NAME = [ '...', ... ];` string array out of a TypeScript source file.
+The e2e package cannot import server code (it has none of the server's dependencies),
+so the specs read the list from source and follow it when it changes.
+*/
 export const parseStringArray = (source: string, name: string): string[] => {
   const match = new RegExp(String.raw`export const ${name}\s*=\s*\[([^\]]*)\]`).exec(source);
   if (!match) {

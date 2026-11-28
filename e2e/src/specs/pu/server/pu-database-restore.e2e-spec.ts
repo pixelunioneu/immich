@@ -48,10 +48,10 @@ const userCount = async () => {
 };
 
 /**
- * Database upload and restore are disabled on the fork: a restore pipes an uploaded
- * file into psql. The HTTP entry points are all under blocked prefixes, and the
- * services refuse on their own as well, which the persisted-action test reaches.
- */
+Database upload and restore are disabled on the fork: a restore pipes an uploaded
+file into psql. The HTTP entry points are all under blocked prefixes, and the
+services refuse on their own as well, which the persisted-action test reaches.
+*/
 describe('PixelUnion database restore', () => {
   let admin: LoginResponse;
 
@@ -97,11 +97,11 @@ describe('PixelUnion database restore', () => {
   });
 
   /**
-   * A restore action stored in system metadata is picked up by the maintenance worker
-   * when the server boots. No HTTP route leads there on the fork, so the test stores it
-   * directly, restarts the server, and checks that the worker refuses it and the data
-   * is still there. The CLI then takes the server out of maintenance mode.
-   */
+  A restore action stored in system metadata is picked up by the maintenance worker
+  when the server boots. No HTTP route leads there on the fork, so the test stores it
+  directly, restarts the server, and checks that the worker refuses it and the data
+  is still there. The CLI then takes the server out of maintenance mode.
+  */
   describe('restore action persisted in system metadata', () => {
     afterAll(async () => {
       // Whatever happened above, hand the next spec a normal server.

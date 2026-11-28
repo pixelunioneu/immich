@@ -4,11 +4,11 @@ import { containers, dockerExec, repoRoot } from 'src/pu/helpers.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
- * Upgrade path: a database at the schema of the last fork release must migrate cleanly
- * with the server under test. The fixture is a dump of a fresh v3.3.5-pu7 database, see
- * e2e/pu/fixtures/README.md. While the server has no newer migrations this only proves
- * the fixture loads and matches; once an upstream merge adds migrations, it runs them.
- */
+Upgrade path: a database at the schema of the last fork release must migrate cleanly
+with the server under test. The fixture is a dump of a fresh v3.3.5-pu7 database, see
+e2e/pu/fixtures/README.md. While the server has no newer migrations this only proves
+the fixture loads and matches; once an upstream merge adds migrations, it runs them.
+*/
 const fixture = resolve(repoRoot, 'e2e/pu/fixtures/v3.3.5-pu7-schema.sql');
 const database = 'immich_pu_upgrade';
 

@@ -3,11 +3,11 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The front door answers /api/server/version for idle tenants, so clients must not be
- * able to tell it from the server. The stack gives the front door the version from
- * server/package.json (see e2e/pu/compose.sh), as a deployment gives it the server
- * image's version.
- */
+The front door answers /api/server/version for idle tenants, so clients must not be
+able to tell it from the server. The stack gives the front door the version from
+server/package.json (see e2e/pu/compose.sh), as a deployment gives it the server
+image's version.
+*/
 describe('PixelUnion /api/server/version', () => {
   const { version } = JSON.parse(readRepoFile('server/package.json')) as { version: string };
 
