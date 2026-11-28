@@ -8,6 +8,7 @@ import {
   PersonUpdateStrategy,
   ReactionType,
   SharedLinkType,
+  StorageWarningLevel,
   UserAvatarColor,
   UserStatus,
   type ActivityResponseDto,
@@ -45,6 +46,8 @@ const preferences = (overrides: Partial<UserPreferencesResponseDto> = {}): UserP
   sharedLinks: { enabled: true, sidebarWeb: false },
   tags: { enabled: false, sidebarWeb: false },
   recentlyAdded: { sidebarWeb: false },
+  telemetry: { enabled: false },
+  storageWarning: { shownLevel: StorageWarningLevel.None },
   ...overrides,
 });
 const memories = (assets: AssetResponseDto[], years: MemoryYearSpec[], seed = 42): MemoryResponseDto[] => {

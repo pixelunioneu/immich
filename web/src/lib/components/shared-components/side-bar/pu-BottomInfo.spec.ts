@@ -1,13 +1,18 @@
-import type { ServerAboutResponseDto, ServerStorageResponseDto } from '@immich/sdk';
-import { render, screen } from '@testing-library/svelte';
-import { init, register, waitLocale } from 'svelte-i18n';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { authManager } from '#lib/managers/auth-manager.svelte.ts';
-import { locale } from '#lib/stores/preferences.store.ts';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import type { MockData } from '#test/common/data.ts';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import { locale as i18nLocale, register } from 'svelte-i18n';
+import { expect, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import BottomInfo from './BottomInfo.svelte';
+
+// The shared test setup renders translation keys; these specs assert the English strings.
+register('en', () => import('#i18n/en.json'));
+
+beforeAll(async () => {
+  await i18nLocale.set('en');
+});
 
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
@@ -28,15 +33,14 @@ vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
 
 const GiB = 1024 ** 3;
 
-// Lets the referral lookup resolve and the component re-render before checking that something is absent.
-const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+const load = () => Promise.resolve({});
 
 const ok = { status: 'ok', referral: { referral_id: 'abc', referral_url: 'https://pixelunion.eu/?ref=abc' } };
 
 /** An admin on a long-running, unlicensed server who never hid the buy button: upstream would show "Buy Immich". */
 const login = (usedBytes: number, totalBytes: number) => {
   authManager.setUser(
-    userAdminFactory.build({
+    factory.user({
       isAdmin: true,
       license: null,
       createdAt: '2020-01-01T00:00:00.000Z',
@@ -45,91 +49,77 @@ const login = (usedBytes: number, totalBytes: number) => {
     }),
   );
   authManager.setPreferences(
-    preferencesFactory.build({ purchase: { hideBuyButtonUntil: '2020-01-01T00:00:00.000Z', showSupportBadge: true } }),
+    factory.preferences({ purchase: { hideBuyButtonUntil: '2020-01-01T00:00:00.000Z', showSupportBadge: true } }),
   );
   authManager.isPurchased = false;
+};
+
+const setUp = (data: MockData) => {
+  Object.assign(data.aboutInfo, { version: 'v3.3.5', sourceRef: 'v3.3.5', repository: 'pixelunioneu/immich' });
+  Object.assign(data.storage, { diskSizeRaw: 1000 * GiB, diskUseRaw: 10 * GiB });
+  data.versionHistory.length = 0;
+  referral.loadReferral.mockReset();
+  referral.loadReferral.mockResolvedValue(ok);
 };
 
 // PixelUnion: the sidebar footer shows storage, then either the referral banner or (from 80%) the storage
 // warning button. Upstream's "Buy Immich" / supporter block and FUTO Backups item are not shown.
 describe('BottomInfo (PixelUnion)', () => {
-  beforeAll(async () => {
-    await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
-    await waitLocale('en-US');
-    locale.set('en-US');
-  });
-
-  beforeEach(() => {
-    const about = {
-      version: 'v3.3.5',
-      sourceRef: 'v3.3.5',
-      repository: 'pixelunioneu/immich',
-    } as ServerAboutResponseDto;
-    userInteraction.serverInfo = { diskSizeRaw: 1000 * GiB, diskUseRaw: 10 * GiB } as ServerStorageResponseDto;
-    userInteraction.aboutInfo = about;
-    userInteraction.versions = [];
-    sdkMock.getAboutInfo.mockResolvedValue(about);
-    sdkMock.getVersionHistory.mockResolvedValue([]);
-    sdkMock.getStorage.mockResolvedValue(userInteraction.serverInfo);
-    referral.loadReferral.mockResolvedValue(ok);
-  });
-
-  afterEach(() => {
-    authManager.reset();
-    userInteraction.serverInfo = undefined;
-    userInteraction.aboutInfo = undefined;
-    userInteraction.versions = undefined;
-    referral.loadReferral.mockReset();
-  });
-
-  it('shows the storage meter in GB', () => {
+  test('shows the storage meter in GB', async ({ data, render }) => {
+    setUp(data);
     login(2 * GiB, 10 * GiB);
 
-    render(BottomInfo);
+    await render(BottomInfo, load);
 
-    expect(screen.getByText('2 GB of 10 GB used')).toBeInTheDocument();
+    await expect.element(page.getByText('2 GB of 10 GB used', { exact: true })).toBeInTheDocument();
   });
 
-  it('shows the referral banner while storage is below 80%', async () => {
+  test('shows the referral banner while storage is below 80%', async ({ data, render }) => {
+    setUp(data);
     login(2 * GiB, 10 * GiB);
 
-    render(BottomInfo);
+    await render(BottomInfo, load);
 
-    expect(await screen.findByRole('link', { name: 'Get extra storage' })).toHaveAttribute('href', '/referral');
-    expect(screen.queryByText('Storage almost full')).not.toBeInTheDocument();
+    await expect.element(page.getByRole('link', { name: 'Get extra storage' })).toHaveAttribute('href', '/referral');
+    await expect.element(page.getByText('Storage almost full')).not.toBeInTheDocument();
   });
 
-  it.each([
+  test.for([
     { used: 8, label: 'Storage almost full' },
     { used: 9.5, label: 'Storage full' },
-  ])('replaces the referral banner with a "$label" button at $used of 10 GB', async ({ used, label }) => {
-    login(used * GiB, 10 * GiB);
+  ])(
+    'replaces the referral banner with a "$label" button at $used of 10 GB',
+    async ({ used, label }, { data, render, settle }) => {
+      setUp(data);
+      login(used * GiB, 10 * GiB);
 
-    render(BottomInfo);
+      await render(BottomInfo, load);
 
-    expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
-    await settle();
-    expect(screen.queryByText('Get extra storage')).not.toBeInTheDocument();
-  });
+      await expect.element(page.getByRole('button', { name: label })).toBeInTheDocument();
+      await settle();
+      await expect.element(page.getByText('Get extra storage')).not.toBeInTheDocument();
+    },
+  );
 
-  it('does not show the upstream "Buy Immich" or supporter block', async () => {
+  test('does not show the upstream "Buy Immich" or supporter block', async ({ data, render }) => {
+    setUp(data);
     login(2 * GiB, 10 * GiB);
 
-    const { container } = render(BottomInfo);
+    await render(BottomInfo, load);
 
-    await screen.findByText('Get extra storage');
-    expect(screen.queryByText(/buy immich/i)).not.toBeInTheDocument();
-    expect(container.querySelector('.license-status')).toBeNull();
+    await expect.element(page.getByText('Get extra storage')).toBeInTheDocument();
+    await expect.element(page.getByText(/buy immich/i)).not.toBeInTheDocument();
+    expect(document.body.querySelector('.license-status')).toBeNull();
   });
 
-  it('does not show a backups entry, even to an admin with every feature flag on', async () => {
+  test('does not show a backups entry, even to an admin with every feature flag on', async ({ data, render }) => {
+    setUp(data);
     login(2 * GiB, 10 * GiB);
 
-    const { container } = render(BottomInfo);
+    await render(BottomInfo, load);
 
-    await screen.findByText('Get extra storage');
-    expect(container.querySelector('a[href*="backup"]')).toBeNull();
-    expect(container.textContent).not.toMatch(/backup|futo/i);
+    await expect.element(page.getByText('Get extra storage')).toBeInTheDocument();
+    expect(document.body.querySelector('a[href*="backup"]')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/backup|futo/i);
   });
 });

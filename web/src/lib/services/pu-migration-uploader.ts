@@ -1,16 +1,16 @@
-import { toastManager } from '@immich/ui';
-import { t } from 'svelte-i18n';
-import { get } from 'svelte/store';
 import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
 import {
+  MigratorApiError,
   getMigrationUploadAuthHeader,
   getMigrationUploadUrl,
-  MigratorApiError,
 } from '#lib/services/pu-migrator.service.ts';
-import { migrationUploadStore, MigrationUploadState } from '#lib/stores/migration-upload.ts';
+import { MigrationUploadState, migrationUploadStore } from '#lib/stores/migration-upload.ts';
 import { uploadRequest } from '#lib/utils.ts';
 import { ExecutorQueue } from '#lib/utils/executor-queue.ts';
 import { clearPuOidcAccessTokenCache } from '#lib/utils/pu-oidc.ts';
+import { toastManager } from '@immich/ui';
+import { t } from 'svelte-i18n';
+import { get } from 'svelte/store';
 
 export const migrationUploadQueue = new ExecutorQueue({ concurrency: 1 });
 

@@ -1,14 +1,22 @@
-import { StorageWarningLevel } from '@immich/sdk';
-import { modalManager } from '@immich/ui';
-import { render, screen } from '@testing-library/svelte';
-import { init, register, waitLocale } from 'svelte-i18n';
 import { authManager } from '#lib/managers/auth-manager.svelte.ts';
-import { locale } from '#lib/stores/preferences.store.ts';
 import { PU_BILLING_PORTAL_URL } from '#lib/utils/pu-api.ts';
 import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import { StorageWarningLevel } from '@immich/sdk';
+import { modalManager } from '@immich/ui';
+import { locale as i18nLocale, register } from 'svelte-i18n';
+import { expect, vi } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import { page } from 'vitest/browser';
 import StorageFullModal from './StorageFullModal.svelte';
+
+// The shared test setup renders translation keys; these specs assert the English strings.
+register('en', () => import('#i18n/en.json'));
+
+beforeAll(async () => {
+  await i18nLocale.set('en');
+});
 
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
@@ -29,9 +37,9 @@ type Props = {
   onClose: () => void;
 };
 
-const renderModal = (props: Partial<Props> = {}) => {
+const renderModal = async (props: Partial<Props> = {}) => {
   const onClose = vi.fn();
-  render(StorageFullModal, {
+  await render(StorageFullModal, {
     level: StorageWarningLevel.AlmostFull,
     usedBytes: 8.5 * GiB,
     totalBytes: 10 * GiB,
@@ -43,75 +51,72 @@ const renderModal = (props: Partial<Props> = {}) => {
   return { onClose };
 };
 
-const link = (name: RegExp) => screen.getByRole('link', { name });
+const link = (name: RegExp) => page.getByRole('link', { name });
+const text = (value: string) => page.getByText(value, { exact: true });
 
 // PixelUnion: at 80% and 95% of the storage, a popup explains what is going on and offers a way out:
 // upgrade (tenant owner) or ask the owner, invite a friend for extra storage, or clean up.
 describe('StorageFullModal (PixelUnion)', () => {
-  beforeAll(async () => {
-    await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
-    await waitLocale('en-US');
-    locale.set('en-US');
+  test('says the storage is almost full, with the usage in GB and percent', async () => {
+    await renderModal({ level: StorageWarningLevel.AlmostFull, usedBytes: 8.5 * GiB, totalBytes: 10 * GiB });
+
+    await expect.element(text('Your storage is almost full')).toBeInTheDocument();
+    await expect.element(text('8.5 GB of 10 GB used')).toBeInTheDocument();
+    await expect.element(text("You've used 85% of your storage.")).toBeInTheDocument();
+    await expect.element(text("When it's full, new photos and videos can't be uploaded.")).toBeInTheDocument();
   });
 
-  it('says the storage is almost full, with the usage in GB and percent', () => {
-    renderModal({ level: StorageWarningLevel.AlmostFull, usedBytes: 8.5 * GiB, totalBytes: 10 * GiB });
+  test('says the storage is full, capping the percentage at 100', async () => {
+    await renderModal({ level: StorageWarningLevel.Full, usedBytes: 11 * GiB, totalBytes: 10 * GiB });
 
-    expect(screen.getByText('Your storage is almost full')).toBeInTheDocument();
-    expect(screen.getByText('8.5 GB of 10 GB used')).toBeInTheDocument();
-    expect(screen.getByText("You've used 85% of your storage.")).toBeInTheDocument();
-    expect(screen.getByText("When it's full, new photos and videos can't be uploaded.")).toBeInTheDocument();
+    await expect.element(text('Your storage is full')).toBeInTheDocument();
+    await expect.element(text("You've used 100% of your storage.")).toBeInTheDocument();
+    await expect
+      .element(text("New photos and videos can't be uploaded until there is space again."))
+      .toBeInTheDocument();
   });
 
-  it('says the storage is full, capping the percentage at 100', () => {
-    renderModal({ level: StorageWarningLevel.Full, usedBytes: 11 * GiB, totalBytes: 10 * GiB });
-
-    expect(screen.getByText('Your storage is full')).toBeInTheDocument();
-    expect(screen.getByText("You've used 100% of your storage.")).toBeInTheDocument();
-    expect(screen.getByText("New photos and videos can't be uploaded until there is space again.")).toBeInTheDocument();
-  });
-
-  it('lets the tenant owner upgrade in the Stripe portal, in a new tab', async () => {
-    const { onClose } = renderModal({ isAdmin: true });
+  test('lets the tenant owner upgrade in the Stripe portal, in a new tab', async () => {
+    const { onClose } = await renderModal({ isAdmin: true });
 
     const upgrade = link(/Upgrade your plan/);
-    expect(upgrade).toHaveAttribute('href', PU_BILLING_PORTAL_URL);
-    expect(upgrade).toHaveAttribute('target', '_blank');
-    expect(screen.queryByText('Ask for more storage')).not.toBeInTheDocument();
+    await expect.element(upgrade).toHaveAttribute('href', PU_BILLING_PORTAL_URL);
+    await expect.element(upgrade).toHaveAttribute('target', '_blank');
+    await expect.element(page.getByText('Ask for more storage')).not.toBeInTheDocument();
 
-    upgrade.addEventListener('click', (event) => event.preventDefault());
-    upgrade.click();
+    upgrade.element().addEventListener('click', (event) => event.preventDefault());
+    await upgrade.click();
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('tells regular users to ask their administrator instead of linking to billing', () => {
-    renderModal({ isAdmin: false });
+  test('tells regular users to ask their administrator instead of linking to billing', async () => {
+    await renderModal({ isAdmin: false });
 
-    expect(screen.getByText('Ask for more storage')).toBeInTheDocument();
-    expect(screen.queryByText('Upgrade your plan')).not.toBeInTheDocument();
-    expect(document.querySelector(`a[href="${PU_BILLING_PORTAL_URL}"]`)).toBeNull();
+    await expect.element(text('Ask for more storage')).toBeInTheDocument();
+    await expect.element(page.getByText('Upgrade your plan')).not.toBeInTheDocument();
+    expect(document.querySelector(`a[href="${CSS.escape(PU_BILLING_PORTAL_URL)}"]`)).toBeNull();
   });
 
-  it('offers the referral page only when asked to', () => {
-    renderModal({ showReferral: true });
-    expect(link(/Invite a friend/)).toHaveAttribute('href', '/referral');
+  test('offers the referral page only when asked to', async () => {
+    await renderModal({ showReferral: true });
+    await expect.element(link(/Invite a friend/)).toHaveAttribute('href', '/referral');
   });
 
-  it('hides the referral option when not asked to', () => {
-    renderModal({ showReferral: false });
-    expect(screen.queryByText('Invite a friend')).not.toBeInTheDocument();
+  test('hides the referral option when not asked to', async () => {
+    await renderModal({ showReferral: false });
+    await expect.element(text('Your storage is almost full')).toBeInTheDocument();
+    await expect.element(page.getByText('Invite a friend')).not.toBeInTheDocument();
   });
 
-  it('always offers clean-up via the utilities page', () => {
-    renderModal({ isAdmin: false });
-    expect(link(/Clean up/)).toHaveAttribute('href', '/utilities');
+  test('always offers clean-up via the utilities page', async () => {
+    await renderModal({ isAdmin: false });
+    await expect.element(link(/Clean up/)).toHaveAttribute('href', '/utilities');
   });
 
-  it('closes on "Not now"', () => {
-    const { onClose } = renderModal();
+  test('closes on "Not now"', async () => {
+    const { onClose } = await renderModal();
 
-    screen.getByRole('button', { name: 'Not now' }).click();
+    await page.getByRole('button', { name: 'Not now' }).click();
 
     expect(onClose).toHaveBeenCalled();
   });
@@ -123,22 +128,21 @@ describe('openStorageWarningModal (PixelUnion)', () => {
 
   beforeEach(() => {
     show = vi.spyOn(modalManager, 'show').mockResolvedValue(undefined as never);
+    referral.loadReferral.mockReset();
   });
 
   afterEach(() => {
     show.mockRestore();
-    referral.loadReferral.mockReset();
-    authManager.reset();
   });
 
   const login = (isAdmin: boolean) => {
-    authManager.setUser(userAdminFactory.build({ isAdmin }));
-    authManager.setPreferences(preferencesFactory.build());
+    authManager.setUser(factory.user({ isAdmin }));
+    authManager.setPreferences(factory.preferences());
   };
 
   const ok = { status: 'ok', referral: { referral_id: 'abc', referral_url: 'https://pixelunion.eu/?ref=abc' } };
 
-  it('opens the popup with the usage, admin flag and referral for an eligible tenant', async () => {
+  test('opens the popup with the usage, admin flag and referral for an eligible tenant', async () => {
     login(true);
     referral.loadReferral.mockResolvedValue(ok);
 
@@ -153,7 +157,7 @@ describe('openStorageWarningModal (PixelUnion)', () => {
     });
   });
 
-  it('passes isAdmin false for regular users', async () => {
+  test('passes isAdmin false for regular users', async () => {
     login(false);
     referral.loadReferral.mockResolvedValue(ok);
 
@@ -162,7 +166,7 @@ describe('openStorageWarningModal (PixelUnion)', () => {
     expect(show).toHaveBeenCalledWith(StorageFullModal, expect.objectContaining({ isAdmin: false }));
   });
 
-  it('leaves out the referral when the tenant has no referral link', async () => {
+  test('leaves out the referral when the tenant has no referral link', async () => {
     login(true);
     referral.loadReferral.mockResolvedValue({ status: 'none' });
 
@@ -171,7 +175,7 @@ describe('openStorageWarningModal (PixelUnion)', () => {
     expect(show).toHaveBeenCalledWith(StorageFullModal, expect.objectContaining({ showReferral: false }));
   });
 
-  it('leaves out the referral (without looking it up) above 16 GB of storage', async () => {
+  test('leaves out the referral (without looking it up) above 16 GB of storage', async () => {
     login(true);
     referral.loadReferral.mockResolvedValue(ok);
 

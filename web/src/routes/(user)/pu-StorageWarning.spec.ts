@@ -1,10 +1,9 @@
-import { StorageWarningLevel } from '@immich/sdk';
-import { render } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { authManager } from '#lib/managers/auth-manager.svelte.ts';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import type { Mock } from '#test/unit/mocks/mock.ts';
+import { StorageWarningLevel } from '@immich/sdk';
+import { expect, vi } from 'vitest';
 import StorageWarning from './StorageWarning.svelte';
 
 const modal = vi.hoisted(() => ({ open: vi.fn() }));
@@ -13,83 +12,95 @@ vi.mock('#lib/utils/storage-warning-modal.ts', () => ({ openStorageWarningModal:
 
 const { None, AlmostFull, Full } = StorageWarningLevel;
 
-const login = (usedBytes: number, totalBytes: number, shownLevel: StorageWarningLevel) => {
-  authManager.setUser(userAdminFactory.build({ quotaUsageInBytes: usedBytes, quotaSizeInBytes: totalBytes }));
-  authManager.setPreferences(preferencesFactory.build({ storageWarning: { shownLevel } }));
+const load = () => Promise.resolve({});
+
+const totalBytes = 100;
+
+const login = (usedBytes: number, shownLevel: StorageWarningLevel) => {
+  authManager.setUser(factory.user({ quotaUsageInBytes: usedBytes, quotaSizeInBytes: totalBytes }));
+  authManager.setPreferences(factory.preferences({ storageWarning: { shownLevel } }));
 };
+
+/** The server stores the preference and answers with the updated preferences; `events` records the order. */
+const storePreferences = (api: Mock['api'], events: string[]) =>
+  api.on({
+    updateMyPreferences: ({ body }) => {
+      events.push('stored');
+      return { json: factory.preferences({ storageWarning: body.storageWarning as never }) };
+    },
+  });
 
 // PixelUnion: the (user) layout opens the storage popup once per level (80%, 95%) and remembers that
 // in the user's preferences, so a reload or a second tab doesn't show it again.
 describe('StorageWarning (PixelUnion)', () => {
   beforeEach(() => {
-    sdkMock.updateMyPreferences.mockImplementation(({ userPreferencesUpdateDto }) =>
-      Promise.resolve(preferencesFactory.build({ storageWarning: userPreferencesUpdateDto.storageWarning as never })),
-    );
-  });
-
-  afterEach(() => {
-    authManager.reset();
-    userInteraction.serverInfo = undefined;
     modal.open.mockReset();
-    sdkMock.updateMyPreferences.mockReset();
   });
 
-  it('opens the almost-full popup once, after storing that it was shown', async () => {
-    login(85, 100, None);
+  test('opens the almost-full popup once, after storing that it was shown', async ({ api, render }) => {
+    const events: string[] = [];
+    storePreferences(api, events);
+    modal.open.mockImplementation(() => {
+      events.push('popup');
+    });
+    login(85, None);
 
-    render(StorageWarning);
+    await render(StorageWarning, load);
 
     await vi.waitFor(() => expect(modal.open).toHaveBeenCalledWith(AlmostFull, { usedBytes: 85, totalBytes: 100 }));
-    expect(sdkMock.updateMyPreferences).toHaveBeenCalledWith({
-      userPreferencesUpdateDto: { storageWarning: { shownLevel: AlmostFull } },
-    });
-    expect(sdkMock.updateMyPreferences.mock.invocationCallOrder[0]).toBeLessThan(
-      modal.open.mock.invocationCallOrder[0],
-    );
+    expect(api.updateMyPreferences).toHaveBeenCalledWith({ body: { storageWarning: { shownLevel: AlmostFull } } });
+    expect(events).toEqual(['stored', 'popup']);
     expect(authManager.preferences.storageWarning.shownLevel).toBe(AlmostFull);
   });
 
-  it('escalates to the full popup at 95% even when almost-full was already shown', async () => {
-    login(96, 100, AlmostFull);
+  test('escalates to the full popup at 95% even when almost-full was already shown', async ({ api, render }) => {
+    storePreferences(api, []);
+    login(96, AlmostFull);
 
-    render(StorageWarning);
+    await render(StorageWarning, load);
 
     await vi.waitFor(() => expect(modal.open).toHaveBeenCalledWith(Full, { usedBytes: 96, totalBytes: 100 }));
+    expect(api.updateMyPreferences).toHaveBeenCalledWith({ body: { storageWarning: { shownLevel: Full } } });
   });
 
-  it('does not show a level that was already shown', async () => {
-    login(85, 100, AlmostFull);
+  test('does not show a level that was already shown', async ({ api, render, settle }) => {
+    login(85, AlmostFull);
 
-    render(StorageWarning);
+    await render(StorageWarning, load);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await settle();
     expect(modal.open).not.toHaveBeenCalled();
-    expect(sdkMock.updateMyPreferences).not.toHaveBeenCalled();
+    expect(api.updateMyPreferences.calls).toHaveLength(0);
   });
 
-  it('skips the popup when storing the shown level fails, so it cannot nag on every load', async () => {
-    login(85, 100, None);
-    sdkMock.updateMyPreferences.mockRejectedValue(new Error('offline'));
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  test('skips the popup when storing the shown level fails, so it cannot nag on every load', async ({
+    api,
+    logger,
+    render,
+    settle,
+  }) => {
+    api.on({ updateMyPreferences: () => ({ status: 500, json: { message: 'offline', statusCode: 500 } }) });
+    login(85, None);
 
-    render(StorageWarning);
+    await render(StorageWarning, load);
 
-    await vi.waitFor(() => expect(sdkMock.updateMyPreferences).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => expect(api.updateMyPreferences.calls).toHaveLength(1));
+    await settle();
+    expect(api.updateMyPreferences).toHaveBeenCalledWith({ body: { storageWarning: { shownLevel: AlmostFull } } });
+    expect(logger.error).toHaveBeenCalledWith(/Error \[StorageWarning\]/);
     expect(modal.open).not.toHaveBeenCalled();
-    consoleError.mockRestore();
   });
 
-  it('re-arms the popup once usage drops below 80%', async () => {
-    login(50, 100, Full);
+  test('re-arms the popup once usage drops below 80%', async ({ api, render, settle }) => {
+    storePreferences(api, []);
+    login(50, Full);
 
-    render(StorageWarning);
+    await render(StorageWarning, load);
 
     await vi.waitFor(() =>
-      expect(sdkMock.updateMyPreferences).toHaveBeenCalledWith({
-        userPreferencesUpdateDto: { storageWarning: { shownLevel: None } },
-      }),
+      expect(api.updateMyPreferences).toHaveBeenCalledWith({ body: { storageWarning: { shownLevel: None } } }),
     );
+    await settle();
     expect(modal.open).not.toHaveBeenCalled();
   });
 });

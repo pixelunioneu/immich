@@ -1,18 +1,7 @@
 <script lang="ts">
   import PixelUnionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
   import { copyToClipboard } from '#lib/utils.ts';
-  import {
-    Card,
-    CardBody,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-    Icon,
-    IconButton,
-    Link,
-    Text,
-    VStack,
-  } from '@immich/ui';
+  import { Card, CardBody, CardFooter, CardHeader, CardTitle, Icon, IconButton, Link, Text, VStack } from '@immich/ui';
   import { mdiAlarmLight, mdiCodeTags, mdiContentCopy, mdiMessage, mdiPartyPopper } from '@mdi/js';
   import { t } from 'svelte-i18n';
 

@@ -1,4 +1,5 @@
 import { getReferral } from '#lib/services/pu-referral.service.ts';
+import { puLocation } from '#lib/utils/pu-api.ts';
 
 const PRD_BASE = 'https://api.prd.tech.pixelunion.eu/api/referral';
 const NONPRD_BASE = 'https://api.nonprd.tech.pixelunion.eu/api/referral';
@@ -11,7 +12,9 @@ const REFERRAL = {
 const jsonResponse = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Content-Type': 'application/json' } });
 
-const setHostname = (hostname: string) => vi.stubGlobal('location', { hostname });
+// The specs run in a real browser, which does not allow `location` to be stubbed. The code reads
+// the host through `puLocation`, so a test can pretend to run on a tenant host.
+const setHostname = (hostname: string) => vi.spyOn(puLocation, 'hostname').mockReturnValue(hostname);
 
 describe('pu-referral.service', () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -19,14 +22,15 @@ describe('pu-referral.service', () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
-    setHostname('mytenant.pixelunion.eu');
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('looks up the referral by the current host on production', async () => {
+    setHostname('mytenant.pixelunion.eu');
     fetchMock.mockResolvedValue(jsonResponse(REFERRAL));
 
     const result = await getReferral();

@@ -2,7 +2,7 @@
   import { getStorageQuery } from '#lib/queries/server-info.query.ts';
   import { locale } from '#lib/stores/preferences.store.ts';
   import { getByteUnitString } from '#lib/utils/byte-units.ts';
-  import { getStorageUsage, STORAGE_METER_THRESHOLDS } from '#lib/utils/storage-warning.ts';
+  import { STORAGE_METER_THRESHOLDS, getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { LoadingSpinner, Meter } from '@immich/ui';
   import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';

@@ -1,5 +1,5 @@
+import { getPuApiBaseUrl, puLocation } from '#lib/utils/pu-api.ts';
 import { PUBLIC_PU_FAKE_REFERRAL_ID } from '$app/env/public';
-import { getPuApiBaseUrl } from '#lib/utils/pu-api.ts';
 
 export interface Referral {
   referral_id: string;
@@ -27,7 +27,7 @@ export async function getReferral(): Promise<ReferralResult> {
     };
   }
 
-  const hostname = location.hostname;
+  const hostname = puLocation.hostname();
   let response: Response;
   try {
     response = await fetch(`${getPuApiBaseUrl()}/api/referral/${encodeURIComponent(hostname)}`);

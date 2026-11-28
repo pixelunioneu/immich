@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { migrationUploadStore, MigrationUploadState } from '#lib/stores/migration-upload.ts';
+  import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
   import {
     enqueueMigrationUploads,
     formatMigrationUploadBytes,
     retryMigrationUpload,
   } from '#lib/services/pu-migration-uploader.ts';
-  import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
+  import { MigrationUploadState, migrationUploadStore } from '#lib/stores/migration-upload.ts';
   import { openFilePicker } from '#lib/utils/file-uploader.ts';
   import { Button, toastManager } from '@immich/ui';
   import { t } from 'svelte-i18n';

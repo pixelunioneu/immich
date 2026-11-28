@@ -1,11 +1,11 @@
 <script lang="ts">
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import {
-    confirmEmailChange,
     PuEmailChangeError,
     PuReauthRequiredError,
+    confirmEmailChange,
     requestEmailChange,
   } from '#lib/services/pu-email-change.ts';
-  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { clearPuOidcAccessTokenCache } from '#lib/utils/pu-oidc.ts';
   import { Button, Field, Input, toastManager } from '@immich/ui';
   import { fade } from 'svelte/transition';

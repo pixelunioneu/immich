@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getStorageQuery } from '#lib/queries/server-info.query.ts';
-  import { getCurrentStorageLevel, getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
+  import { getCurrentStorageLevel, getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { StorageWarningLevel } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight, mdiDatabaseAlertOutline } from '@mdi/js';

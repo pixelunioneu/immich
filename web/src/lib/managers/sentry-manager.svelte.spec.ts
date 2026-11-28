@@ -1,10 +1,9 @@
+import { factory } from '#test/common/factories.ts';
 import * as Sentry from '@sentry/sveltekit';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
-const env = vi.hoisted(() => ({ PUBLIC_SENTRY_DSN: '' }));
-
-vi.mock('$app/env/public', () => env);
+// Browser mode evaluates this mock once per file, so the DSN is fixed here; the case without a DSN is
+// covered in sentry-manager-without-dsn.svelte.spec.ts.
+vi.mock('$app/env/public', () => ({ PUBLIC_SENTRY_DSN: 'https://dsn.test/1' }));
 
 vi.mock('@sentry/sveltekit', () => {
   const close = vi.fn();
@@ -15,21 +14,57 @@ vi.mock('@sentry/sveltekit', () => {
   };
 });
 
-const user = userAdminFactory.build({ id: 'user-1', email: 'user@example.com' });
-const withTelemetry = (enabled: boolean) => preferencesFactory.build({ telemetry: { enabled } });
+const user = factory.user({ id: 'user-1', email: 'user@example.com' });
+const withTelemetry = (enabled: boolean) => factory.preferences({ telemetry: { enabled } });
 
-/** The manager subscribes at import time, so load a fresh copy (with fresh auth/event managers) per test. */
-const load = async (dsn: string) => {
-  env.PUBLIC_SENTRY_DSN = dsn;
-  vi.resetModules();
+const cleanups: Array<() => void> = [];
+
+/**
+The manager subscribes at import time. Browser mode cannot reset the module registry, so the shared
+instance is reused (and logged out after each test) and `loadFresh` is only for the import-time cases.
+*/
+const load = async () => {
   const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
   const { eventManager } = await import('#lib/managers/event-manager.svelte.ts');
   const { sentryManager } = await import('#lib/managers/sentry-manager.svelte.ts');
   return { authManager, eventManager, sentryManager };
 };
 
+/** A new manager instance (a distinct module URL), whose event subscriptions are removed after the test. */
+const loadFresh = async (instance: 'without-login' | 'with-login') => {
+  const { eventManager } = await import('#lib/managers/event-manager.svelte.ts');
+  const on = eventManager.on.bind(eventManager);
+  const spy = vi.spyOn(eventManager, 'on').mockImplementation((subscriptions) => {
+    const cleanup = on(subscriptions);
+    cleanups.push(cleanup);
+    return cleanup;
+  });
+  try {
+    // A query string makes the browser evaluate the module again; TypeScript has no types for such specifiers.
+    const module =
+      instance === 'without-login'
+        ? // @ts-expect-error -- query-suffixed specifier
+          await import('#lib/managers/sentry-manager.svelte.ts?without-login')
+        : // @ts-expect-error -- query-suffixed specifier
+          await import('#lib/managers/sentry-manager.svelte.ts?with-login');
+    return module as typeof import('#lib/managers/sentry-manager.svelte.ts');
+  } finally {
+    spy.mockRestore();
+  }
+};
+
 // PixelUnion: opt-in Sentry (errors only), never before login and never without consent or a DSN.
 describe('SentryManager', () => {
+  afterEach(async () => {
+    for (const cleanup of cleanups.splice(0)) {
+      cleanup();
+    }
+    const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
+    const { eventManager } = await import('#lib/managers/event-manager.svelte.ts');
+    eventManager.emit('AuthLogout');
+    authManager.reset();
+  });
+
   beforeEach(() => {
     vi.mocked(Sentry.init).mockClear();
     vi.mocked(Sentry.setUser).mockClear();
@@ -37,13 +72,13 @@ describe('SentryManager', () => {
   });
 
   it('does not initialize at import time', async () => {
-    await load('https://dsn.test/1');
+    await loadFresh('without-login');
 
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 
   it('does not initialize without telemetry consent', async () => {
-    const { authManager, eventManager } = await load('https://dsn.test/1');
+    const { authManager, eventManager } = await load();
     authManager.setPreferences(withTelemetry(false));
 
     eventManager.emit('AuthUserLoaded', user);
@@ -51,18 +86,8 @@ describe('SentryManager', () => {
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 
-  it('does not initialize without a DSN, even with consent', async () => {
-    const { authManager, eventManager } = await load('');
-    authManager.setPreferences(withTelemetry(true));
-
-    eventManager.emit('AuthUserLoaded', user);
-
-    expect(Sentry.init).not.toHaveBeenCalled();
-    expect(Sentry.setUser).not.toHaveBeenCalledWith(expect.objectContaining({ id: user.id }));
-  });
-
   it('initializes errors-only with consent and a DSN', async () => {
-    const { authManager, eventManager } = await load('https://dsn.test/1');
+    const { authManager, eventManager } = await load();
     authManager.setPreferences(withTelemetry(true));
 
     eventManager.emit('AuthUserLoaded', user);
@@ -73,7 +98,7 @@ describe('SentryManager', () => {
   });
 
   it('initializes only once', async () => {
-    const { authManager, eventManager } = await load('https://dsn.test/1');
+    const { authManager, eventManager } = await load();
     authManager.setPreferences(withTelemetry(true));
 
     eventManager.emit('AuthUserLoaded', user);
@@ -83,19 +108,17 @@ describe('SentryManager', () => {
   });
 
   it('initializes at import time when already logged in with consent', async () => {
-    env.PUBLIC_SENTRY_DSN = 'https://dsn.test/1';
-    vi.resetModules();
     const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
     authManager.setUser(user);
     authManager.setPreferences(withTelemetry(true));
 
-    await import('#lib/managers/sentry-manager.svelte.ts');
+    await loadFresh('with-login');
 
     expect(Sentry.init).toHaveBeenCalledTimes(1);
   });
 
   it('shuts down and clears the user on logout', async () => {
-    const { authManager, eventManager } = await load('https://dsn.test/1');
+    const { authManager, eventManager } = await load();
     authManager.setPreferences(withTelemetry(true));
     eventManager.emit('AuthUserLoaded', user);
 
@@ -106,7 +129,7 @@ describe('SentryManager', () => {
   });
 
   it('shuts down when consent is withdrawn', async () => {
-    const { authManager, eventManager, sentryManager } = await load('https://dsn.test/1');
+    const { authManager, eventManager, sentryManager } = await load();
     authManager.setPreferences(withTelemetry(true));
     eventManager.emit('AuthUserLoaded', user);
 

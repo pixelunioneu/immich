@@ -15,6 +15,8 @@ export const load = (({ url }) => {
   const queryParams = url.searchParams;
   const target = queryParams.get('target') as LinkTarget;
   switch (target) {
+    // PixelUnion: FUTO Backups is not available, so a backups link goes to the timeline.
+    case LinkTarget.BACKUPS:
     case LinkTarget.HOME: {
       return redirect(307, Route.photos());
     }

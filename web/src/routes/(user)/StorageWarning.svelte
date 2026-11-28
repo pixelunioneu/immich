@@ -1,13 +1,13 @@
 <script lang="ts">
   import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
   import {
     decideStorageWarning,
     getStorageLevel,
     getStorageUsage,
     type StorageUsage,
   } from '#lib/utils/storage-warning.ts';
-  import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
   import { StorageWarningLevel, updateMyPreferences } from '@immich/sdk';
   import { createQuery } from '@tanstack/svelte-query';
 

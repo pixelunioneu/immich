@@ -2,8 +2,8 @@
   import AlbumViewer from '#lib/components/album-page/AlbumViewer.svelte';
   import IndividualSharedViewer from '#lib/components/share-page/IndividualSharedViewer.svelte';
   import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
-  import PixelUnionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
   import ThemeButton from '#lib/components/shared-components/ThemeButton.svelte';
+  import PixelUnionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
   import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
   import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { setSharedLink } from '#lib/utils.ts';

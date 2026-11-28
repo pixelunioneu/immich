@@ -1,20 +1,14 @@
-import { toastManager } from '@immich/ui';
-import { get } from 'svelte/store';
 import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
 import {
   enqueueMigrationUploads,
   formatMigrationUploadBytes,
   retryMigrationUpload,
 } from '#lib/services/pu-migration-uploader.ts';
-import { getMigrationUploadAuthHeader, MigratorApiError } from '#lib/services/pu-migrator.service.ts';
-import { migrationUploadStore, MigrationUploadState } from '#lib/stores/migration-upload.ts';
-import { uploadRequest } from '#lib/utils.ts';
+import { MigratorApiError, getMigrationUploadAuthHeader } from '#lib/services/pu-migrator.service.ts';
+import { MigrationUploadState, migrationUploadStore } from '#lib/stores/migration-upload.ts';
 import { clearPuOidcAccessTokenCache } from '#lib/utils/pu-oidc.ts';
-
-vi.mock('#lib/utils.ts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('#lib/utils.ts')>()),
-  uploadRequest: vi.fn(),
-}));
+import { toastManager } from '@immich/ui';
+import { get } from 'svelte/store';
 
 vi.mock('#lib/utils/pu-oidc.ts', () => ({
   getPuOidcAccessToken: vi.fn(),
@@ -27,10 +21,81 @@ vi.mock('#lib/services/pu-migrator.service.ts', async (importOriginal) => ({
   getMigrationUploadAuthHeader: vi.fn(),
 }));
 
-vi.mock('@immich/ui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@immich/ui')>()),
-  toastManager: { primary: vi.fn(), warning: vi.fn(), danger: vi.fn(), success: vi.fn() },
-}));
+/**
+`uploadRequest` (in `#lib/utils.ts`) is a thin wrapper around XMLHttpRequest. Browser mode cannot mock that
+module (it is part of an import cycle, and mocking it hangs the run), so the upload is observed one level
+lower: a fake XMLHttpRequest that records the request and answers as the next queued outcome says.
+*/
+type Outcome = (xhr: FakeXhr) => void;
+
+class FakeXhr {
+  static requests: FakeXhr[] = [];
+  static outcomes: Outcome[] = [];
+
+  method = '';
+  url = '';
+  headers: Record<string, string> = {};
+  body: unknown;
+  responseType = '';
+  readyState = 4;
+  status = 0;
+  statusText = '';
+  response: unknown = { status: 'ok' };
+  private readonly listeners = new Map<string, Array<(event: Event) => void>>();
+  private readonly uploadListeners: Array<(event: Event) => void> = [];
+  readonly upload = {
+    addEventListener: (_type: string, listener: (event: Event) => void) => {
+      this.uploadListeners.push(listener);
+    },
+  };
+
+  addEventListener(type: string, listener: (event: Event) => void) {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+
+  setRequestHeader(name: string, value: string) {
+    this.headers[name] = value;
+  }
+
+  abort() {}
+
+  send(body: unknown) {
+    this.body = body;
+    FakeXhr.requests.push(this);
+    const outcome = FakeXhr.outcomes.shift() ?? respond(200, 'OK');
+    queueMicrotask(() => outcome(this));
+  }
+
+  progress(loaded: number, total: number) {
+    const event = new ProgressEvent('progress', { lengthComputable: true, loaded, total });
+    for (const listener of this.uploadListeners) {
+      listener(event);
+    }
+  }
+
+  emit(type: string) {
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(new Event(type));
+    }
+  }
+}
+
+const respond =
+  (status: number, statusText: string): Outcome =>
+  (xhr) => {
+    xhr.status = status;
+    xhr.statusText = statusText;
+    xhr.emit('load');
+  };
+
+const networkError: Outcome = (xhr) => xhr.emit('error');
+
+const uploads = () => FakeXhr.requests;
 
 const takeout = (name = 'takeout-20260101T000000Z-001.zip', size = 10) =>
   new File([new Uint8Array(size)], name, { type: 'application/zip' });
@@ -40,13 +105,20 @@ const items = () => get(migrationUploadStore);
 describe('pu-migration-uploader', () => {
   beforeEach(() => {
     migrationUploadStore.reset();
-    vi.mocked(uploadRequest)
-      .mockReset()
-      .mockResolvedValue({ data: { status: 'ok' }, status: 200 });
+    FakeXhr.requests = [];
+    FakeXhr.outcomes = [];
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
     vi.mocked(getMigrationUploadAuthHeader).mockReset().mockResolvedValue({ Authorization: 'Bearer token-1' });
     vi.mocked(clearPuOidcAccessTokenCache).mockReset();
-    vi.mocked(toastManager.primary).mockReset();
-    vi.mocked(toastManager.warning).mockReset();
+    // Spied on rather than module-mocked: mocking all of `@immich/ui` hangs the browser-mode test run.
+    for (const toast of ['primary', 'warning', 'danger', 'success'] as const) {
+      vi.spyOn(toastManager, toast).mockImplementation(() => undefined as never);
+    }
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('uploads takeout archives to the migrator, not the Immich asset endpoint', async () => {
@@ -55,39 +127,38 @@ describe('pu-migration-uploader', () => {
 
     await enqueueMigrationUploads({ files: [file], onUploadComplete });
 
-    expect(uploadRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: 'https://migrator.test/upload',
-        method: 'POST',
-        data: file,
-        headers: {
-          Authorization: 'Bearer token-1',
-          'X-Filename': file.name,
-          'Content-Type': 'application/octet-stream',
-        },
-      }),
-    );
+    expect(uploads()).toHaveLength(1);
+    expect(uploads()[0]).toMatchObject({
+      url: 'https://migrator.test/upload',
+      method: 'POST',
+      body: file,
+      headers: {
+        Authorization: 'Bearer token-1',
+        'X-Filename': file.name,
+        'Content-Type': 'application/octet-stream',
+      },
+    });
     expect(items()).toEqual([expect.objectContaining({ state: MigrationUploadState.DONE, progress: 1 })]);
     expect(onUploadComplete).toHaveBeenCalledTimes(1);
   });
 
   it('reports progress', async () => {
-    vi.mocked(uploadRequest).mockImplementation(({ onUploadProgress }) => {
-      onUploadProgress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent<XMLHttpRequestEventTarget>);
+    FakeXhr.outcomes.push((xhr) => {
+      xhr.progress(5, 10);
       expect(items()[0]).toMatchObject({ state: MigrationUploadState.UPLOADING, progress: 0.5 });
-      return Promise.resolve({ data: {}, status: 200 });
+      respond(200, 'OK')(xhr);
     });
 
     await enqueueMigrationUploads({ files: [takeout()] });
 
-    expect(uploadRequest).toHaveBeenCalledTimes(1);
+    expect(uploads()).toHaveLength(1);
   });
 
   describe('validation', () => {
     it('rejects files that do not match the filename pattern', async () => {
       await enqueueMigrationUploads({ files: [takeout('photos.zip')] });
 
-      expect(uploadRequest).not.toHaveBeenCalled();
+      expect(uploads()).toHaveLength(0);
       expect(toastManager.warning).toHaveBeenCalledTimes(1);
       expect(items()).toEqual([]);
     });
@@ -96,19 +167,19 @@ describe('pu-migration-uploader', () => {
       await enqueueMigrationUploads({ files: [takeout('TAKEOUT-1.ZIP')] });
       await enqueueMigrationUploads({ files: [takeout('export-1.tgz')], filenamePattern: 'export-*.tgz' });
 
-      expect(uploadRequest).toHaveBeenCalledTimes(2);
+      expect(uploads()).toHaveLength(2);
     });
 
     it('treats regex characters in the pattern literally', async () => {
       await enqueueMigrationUploads({ files: [takeout('takeout-1Xzip')] });
 
-      expect(uploadRequest).not.toHaveBeenCalled();
+      expect(uploads()).toHaveLength(0);
     });
 
     it('rejects files above the size limit', async () => {
       await enqueueMigrationUploads({ files: [takeout(undefined, 11)], maxBytes: 10 });
 
-      expect(uploadRequest).not.toHaveBeenCalled();
+      expect(uploads()).toHaveLength(0);
       expect(toastManager.warning).toHaveBeenCalledTimes(1);
     });
 
@@ -117,31 +188,29 @@ describe('pu-migration-uploader', () => {
 
       await enqueueMigrationUploads({ files: [file], existingUploadKeys: new Set([`${file.name}\t${file.size}`]) });
 
-      expect(uploadRequest).not.toHaveBeenCalled();
+      expect(uploads()).toHaveLength(0);
       expect(toastManager.primary).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('errors', () => {
     it('clears the token cache and retries once on 401', async () => {
-      vi.mocked(uploadRequest)
-        .mockRejectedValueOnce(Object.assign(new Error('Unauthorized'), { statusCode: 401 }))
-        .mockResolvedValueOnce({ data: {}, status: 200 });
+      FakeXhr.outcomes.push(respond(401, 'Unauthorized'), respond(200, 'OK'));
 
       await enqueueMigrationUploads({ files: [takeout()] });
 
       expect(clearPuOidcAccessTokenCache).toHaveBeenCalledTimes(1);
       expect(getMigrationUploadAuthHeader).toHaveBeenCalledTimes(2);
-      expect(uploadRequest).toHaveBeenCalledTimes(2);
+      expect(uploads()).toHaveLength(2);
       expect(items()[0].state).toBe(MigrationUploadState.DONE);
     });
 
     it('does not retry a second 401', async () => {
-      vi.mocked(uploadRequest).mockRejectedValue(Object.assign(new Error('Unauthorized'), { statusCode: 401 }));
+      FakeXhr.outcomes.push(respond(401, 'Unauthorized'), respond(401, 'Unauthorized'), respond(401, 'Unauthorized'));
 
       await enqueueMigrationUploads({ files: [takeout()] });
 
-      expect(uploadRequest).toHaveBeenCalledTimes(2);
+      expect(uploads()).toHaveLength(2);
       expect(items()[0]).toMatchObject({ state: MigrationUploadState.ERROR, error: 'Unauthorized' });
     });
 
@@ -152,12 +221,15 @@ describe('pu-migration-uploader', () => {
       await enqueueMigrationUploads({ files: [takeout()], onReauthRequired });
 
       expect(onReauthRequired).toHaveBeenCalledTimes(1);
-      expect(uploadRequest).not.toHaveBeenCalled();
+      expect(uploads()).toHaveLength(0);
       expect(items()[0].state).toBe(MigrationUploadState.ERROR);
     });
 
     it('shows the migrator error detail', async () => {
-      vi.mocked(uploadRequest).mockRejectedValue(new MigratorApiError('Request failed: 413', 413, 'File too large'));
+      // The migrator service reports its errors from the auth header lookup and wraps its own requests.
+      vi.mocked(getMigrationUploadAuthHeader).mockRejectedValue(
+        new MigratorApiError('Request failed: 413', 413, 'File too large'),
+      );
 
       await enqueueMigrationUploads({ files: [takeout()] });
 
@@ -166,7 +238,7 @@ describe('pu-migration-uploader', () => {
 
     it('can retry a failed upload', async () => {
       const file = takeout();
-      vi.mocked(uploadRequest).mockRejectedValueOnce(new Error('network'));
+      FakeXhr.outcomes.push(networkError);
       await enqueueMigrationUploads({ files: [file] });
       expect(items()[0].state).toBe(MigrationUploadState.ERROR);
 

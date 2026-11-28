@@ -55,7 +55,19 @@
 
     await executeMutation(
       createUserAdminMutation,
-      [{ userAdminCreateDto: { email, password: generatePassword(), shouldChangePassword, name, quotaSizeInBytes, notify, isAdmin } }],
+      [
+        {
+          userAdminCreateDto: {
+            email,
+            password: generatePassword(),
+            shouldChangePassword,
+            name,
+            quotaSizeInBytes,
+            notify,
+            isAdmin,
+          },
+        },
+      ],
       { onSuccess: (user) => void goto(Route.viewUser(user), { replaceState: true }) },
     );
 

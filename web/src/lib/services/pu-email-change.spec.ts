@@ -1,8 +1,8 @@
 import {
-  confirmEmailChange,
   PU_MGMT_API_BASE,
   PuEmailChangeError,
   PuReauthRequiredError,
+  confirmEmailChange,
   requestEmailChange,
 } from '#lib/services/pu-email-change.ts';
 import { getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';

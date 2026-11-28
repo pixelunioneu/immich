@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from '@immich/ui';
   import { fade } from 'svelte/transition';
+
   const TOTP_SETUP_URL = 'https://login.pixelunion.eu/realms/pixelunion/account/';
   const openInNewTab = (baseUrl: string) => {
     // fallback without next param if anything unexpected happens
