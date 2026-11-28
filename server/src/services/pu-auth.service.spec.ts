@@ -50,7 +50,7 @@ describe(`${AuthService.name} (PixelUnion OIDC token bridge)`, () => {
     it('should store the Keycloak refresh token for the new session', async () => {
       const session = SessionFactory.create();
       mocks.oauth.getProfileAndOAuthSid.mockResolvedValue({
-        profile: OAuthProfileFactory.create(),
+        rawProfile: OAuthProfileFactory.create(),
         refreshToken: 'keycloak-refresh-token',
       });
       mocks.session.create.mockResolvedValue(session);
@@ -65,7 +65,7 @@ describe(`${AuthService.name} (PixelUnion OIDC token bridge)`, () => {
     });
 
     it('should not store anything when the provider returns no refresh token', async () => {
-      mocks.oauth.getProfileAndOAuthSid.mockResolvedValue({ profile: OAuthProfileFactory.create() });
+      mocks.oauth.getProfileAndOAuthSid.mockResolvedValue({ rawProfile: OAuthProfileFactory.create() });
       mocks.session.create.mockResolvedValue(SessionFactory.create());
 
       await sut.callback(callbackDto, {}, loginDetails);

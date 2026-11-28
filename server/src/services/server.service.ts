@@ -108,7 +108,6 @@ export class ServerService extends BaseService {
       reverseGeocoding,
       metadata,
       map,
-      backup,
       machineLearning,
       trash,
       oauth,
@@ -123,7 +122,8 @@ export class ServerService extends BaseService {
       facialRecognition: isFacialRecognitionEnabled(machineLearning),
       duplicateDetection: isDuplicateDetectionEnabled(machineLearning),
       map: map.enabled,
-      backups: !!backup.beta,
+      // PixelUnion: FUTO Backups is not part of this server
+      backups: false,
       reverseGeocoding: reverseGeocoding.enabled,
       importFaces: metadata.faces.import,
       sidecar: true,

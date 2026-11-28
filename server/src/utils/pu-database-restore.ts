@@ -13,8 +13,12 @@ import { MaintenanceAction } from 'src/enum.js';
  */
 export const DATABASE_RESTORE_DISABLED_MESSAGE = 'Database backup upload and restore are disabled on this server';
 
+// Rollback (upstream v3.4, FUTO Backups) restores a snapshot and then the database, so it is
+// refused the same way. FUTO Backups itself is not part of this server.
 export const isDatabaseRestoreAction = (action?: MaintenanceAction): boolean =>
-  action === MaintenanceAction.RestoreDatabase || action === MaintenanceAction.SelectDatabaseRestore;
+  action === MaintenanceAction.RestoreDatabase ||
+  action === MaintenanceAction.SelectDatabaseRestore ||
+  action === MaintenanceAction.Rollback;
 
 export const refuseDatabaseRestore = (): never => {
   throw new ForbiddenException(DATABASE_RESTORE_DISABLED_MESSAGE);

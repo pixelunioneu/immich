@@ -1,4 +1,3 @@
-import { YuccaService } from '@futo-org/backups-orchestrator-api';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { parseCookie } from 'cookie';
@@ -6,7 +5,6 @@ import { NextFunction, Request, Response } from 'express';
 import { jwtVerify } from 'jose';
 import { readFileSync } from 'node:fs';
 import { IncomingHttpHeaders } from 'node:http';
-import { basename } from 'node:path';
 import { serverVersion } from 'src/constants.js';
 import { StorageCore } from 'src/cores/storage.core.js';
 import {
@@ -89,13 +87,6 @@ export class MaintenanceWorkerService {
     this.maintenanceWebsocketRepository.setStatusUpdateFn((status) => (this.#status = status));
 
     await this.logSecret();
-
-    this.moduleRef.get(YuccaService, { strict: false }).setDatabaseHooks({
-      tagName: 'yucca.v1.immichBackupFileName',
-      dump: (signal) => this.databaseBackupService.createDatabaseBackup('', signal),
-      cleanup: () => this.databaseBackupService.cleanupDatabaseBackups(),
-      restore: (fileName) => this.databaseBackupService.restoreDatabaseBackup(basename(fileName)),
-    });
 
     if (state.action) {
       void this.runAction(state.action);
@@ -380,31 +371,10 @@ export class MaintenanceWorkerService {
     }
   }
 
-  private async rollback(repositoryId: string, snapshotId: string): Promise<void> {
-    this.setStatus({
-      active: true,
-      action: MaintenanceAction.Rollback,
-    });
-
-    const futoBackups = this.moduleRef.get(YuccaService, { strict: false });
-    const { jobId, task, immichBackupFileName } = await futoBackups.restoreSnapshotInplace(repositoryId, snapshotId);
-
-    this.setStatus({
-      active: true,
-      action: MaintenanceAction.Rollback,
-      futoBackupsJobId: jobId,
-    });
-
-    await task;
-
-    if (!immichBackupFileName) {
-      return this.setAction({
-        action: MaintenanceAction.SelectDatabaseRestore,
-      });
-    }
-
-    const backupFileName = basename(immichBackupFileName);
-    await this.restoreBackup(backupFileName);
+  // PixelUnion: FUTO Backups is not part of this server, so there is no snapshot to roll back
+  // to. runAction() already refuses the action; this is the last line of defence.
+  private rollback(_repositoryId: string, _snapshotId: string): Promise<void> {
+    return Promise.reject(new Error(DATABASE_RESTORE_DISABLED_MESSAGE));
   }
 
   private async endMaintenance(): Promise<void> {

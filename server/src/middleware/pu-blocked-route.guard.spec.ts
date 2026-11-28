@@ -28,6 +28,8 @@ describe(BlockedRouteGuard.name, () => {
         '/api/libraries',
         '/api/admin/maintenance',
         '/api/admin/notifications/test-email',
+        '/api/futo-backups',
+        '/api/passkeys',
       ]),
     );
   });
@@ -176,6 +178,7 @@ const CONTROLLER_ROUTES: Record<string, RouteClass> = {
   notifications: { status: 'allowed' },
   oauth: { status: 'allowed' },
   partners: { status: 'allowed' },
+  passkeys: { status: 'blocked' }, // upstream v3.4; a login path next to Keycloak
   people: { status: 'allowed' },
   plugins: { status: 'allowed' },
   'public/config': { status: 'allowed' },
@@ -195,6 +198,13 @@ const CONTROLLER_ROUTES: Record<string, RouteClass> = {
   view: { status: 'allowed' },
   workflows: { status: 'allowed' },
 };
+
+/**
+ * Blocked prefixes with no controller in server/src/controllers. FUTO Backups (upstream v3.4)
+ * ships its controllers in the npm package `@futo-org/backups-orchestrator-api`, which this
+ * fork does not install or mount; the prefix stays blocked in case a merge brings it back.
+ */
+const BLOCKED_WITHOUT_CONTROLLER = ['/api/futo-backups'];
 
 const controllersDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'controllers');
 
@@ -289,7 +299,7 @@ describe('PixelUnion controller route snapshot (tenant reachability of every API
     const openPaths = entries.flatMap(([prefix, route]) =>
       route.status === 'blocked' ? (route.open ?? []).map((subPath) => api(prefix, subPath)) : [],
     );
-    expect(BLOCKED_ROUTE_PREFIXES.toSorted()).toEqual(blockedPaths.toSorted());
+    expect(BLOCKED_ROUTE_PREFIXES.toSorted()).toEqual([...blockedPaths, ...BLOCKED_WITHOUT_CONTROLLER].toSorted());
     expect(BLOCKED_ROUTE_EXCEPTIONS.toSorted()).toEqual(openPaths.toSorted());
   });
 });

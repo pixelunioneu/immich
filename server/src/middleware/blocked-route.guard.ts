@@ -28,6 +28,12 @@ export const BLOCKED_ROUTE_PREFIXES = [
   '/api/libraries',
   '/api/admin/maintenance',
   '/api/admin/notifications/test-email',
+  // FUTO Backups (upstream v3.4) is not mounted on this server; this keeps its routes and
+  // socket path closed even if a later merge re-mounts the module by accident.
+  '/api/futo-backups',
+  // Passkeys are a login path next to Keycloak. Upstream ships them disabled; blocked here too
+  // so a later upstream re-enable cannot open a login that bypasses Keycloak.
+  '/api/passkeys',
 ];
 
 /**

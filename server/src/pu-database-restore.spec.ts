@@ -69,7 +69,7 @@ describe('PixelUnion: database restore disabled', () => {
       expect(mocks.event.emit).not.toHaveBeenCalled();
     });
 
-    it.each([MaintenanceAction.RestoreDatabase, MaintenanceAction.SelectDatabaseRestore])(
+    it.each([MaintenanceAction.RestoreDatabase, MaintenanceAction.SelectDatabaseRestore, MaintenanceAction.Rollback])(
       'should refuse to enter maintenance mode with action %s',
       async (action) => {
         await expect(
@@ -128,11 +128,12 @@ describe('PixelUnion: database restore disabled', () => {
         mocks.process,
         mocks.database as never,
         databaseBackupServiceMock,
+        {} as never, // ModuleRef: upstream uses it for FUTO Backups, which is not mounted here
       );
       sut.mock({ active: true, action: MaintenanceAction.Start });
     });
 
-    it.each([MaintenanceAction.RestoreDatabase, MaintenanceAction.SelectDatabaseRestore])(
+    it.each([MaintenanceAction.RestoreDatabase, MaintenanceAction.SelectDatabaseRestore, MaintenanceAction.Rollback])(
       'should refuse setAction(%s)',
       async (action) => {
         await expect(sut.setAction({ action, restoreBackupFilename: 'immich-db-backup-1.sql' })).rejects.toThrowError(
@@ -147,6 +148,19 @@ describe('PixelUnion: database restore disabled', () => {
       await sut.runAction({
         action: MaintenanceAction.RestoreDatabase,
         restoreBackupFilename: 'immich-db-backup-1.sql',
+      });
+
+      expect(mocks.database.tryLock).not.toHaveBeenCalled();
+      expect(mocks.systemMetadata.set).not.toHaveBeenCalled();
+      expect(databaseBackupServiceMock.restoreDatabaseBackup).not.toHaveBeenCalled();
+      expect(mocks.logger.error).toHaveBeenCalledWith(DATABASE_RESTORE_DISABLED_MESSAGE);
+    });
+
+    it('should not run a FUTO Backups rollback persisted in maintenance state', async () => {
+      await sut.runAction({
+        action: MaintenanceAction.Rollback,
+        rollbackRepositoryId: 'repository-1',
+        rollbackSnapshotId: 'snapshot-1',
       });
 
       expect(mocks.database.tryLock).not.toHaveBeenCalled();
