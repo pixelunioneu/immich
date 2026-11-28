@@ -14,6 +14,10 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { QueueName } from 'src/enum.js';
 
+// These tests walk the source tree and spawn `node --check` / `bash -n`. That takes about
+// a second alone, but the default 5s is too tight when the whole suite runs in parallel.
+vi.setConfig({ testTimeout: 30_000 });
+
 const serverRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(serverRoot, '..');
 
