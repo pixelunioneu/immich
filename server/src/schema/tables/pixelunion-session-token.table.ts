@@ -2,10 +2,10 @@ import {
   Column,
   CreateDateColumn,
   ForeignKeyColumn,
-  type Generated,
   Table,
-  type Timestamp,
   UpdateDateColumn,
+  type Generated,
+  type Timestamp,
 } from '@immich/sql-tools';
 import { UpdateIdColumn, UpdatedAtTrigger } from 'src/decorators.js';
 import { SessionTable } from 'src/schema/tables/session.table.js';

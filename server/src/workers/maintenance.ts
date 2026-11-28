@@ -1,5 +1,4 @@
 import 'src/instrument.js';
-
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { isMainThread } from 'node:worker_threads';

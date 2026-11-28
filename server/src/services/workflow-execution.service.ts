@@ -31,7 +31,6 @@ import { AssetService } from 'src/services/asset.service.js';
 import { BaseService } from 'src/services/base.service.js';
 import { TagService } from 'src/services/tag.service.js';
 import type { JobOf } from 'src/types.js';
-import { isAllowedHost } from 'src/utils/workflow.js';
 
 export const PU_HTTP_REQUEST_DISABLED = 'Outbound HTTP requests from workflows are disabled on this server';
 

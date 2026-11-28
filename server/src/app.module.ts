@@ -114,11 +114,7 @@ export class BaseModule implements OnModuleInit, OnModuleDestroy {
 }
 
 @Module({
-  imports: [
-    ...bullImports,
-    ...commonImports,
-    ScheduleModule.forRoot(),
-  ],
+  imports: [...bullImports, ...commonImports, ScheduleModule.forRoot()],
   controllers: [...controllers],
   providers: [...common, ...apiMiddleware, { provide: IWorker, useValue: ImmichWorker.Api }],
   exports: [AuthService, WebsocketRepository],

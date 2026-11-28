@@ -136,16 +136,16 @@ describe(BlockedRouteGuard.name, () => {
 });
 
 /**
- * PixelUnion: snapshot of every `@Controller(...)` prefix, each classified as allowed,
- * blocked or partial. Upstream adds admin surface without telling us; this snapshot turns
- * that into a red test on the merge so someone decides whether tenants may reach it.
- *
- * - allowed: no path under the prefix is blocked.
- * - blocked: the prefix itself is in BLOCKED_ROUTE_PREFIXES; `open` lists the
- *   BLOCKED_ROUTE_EXCEPTIONS under it (sub-paths relative to the prefix).
- * - partial: only the listed sub-paths are blocked (narrower BLOCKED_ROUTE_PREFIXES
- *   entries); `open` lists sub-paths that must stay reachable.
- */
+PixelUnion: snapshot of every `@Controller(...)` prefix, each classified as allowed,
+blocked or partial. Upstream adds admin surface without telling us; this snapshot turns
+that into a red test on the merge so someone decides whether tenants may reach it.
+
+- allowed: no path under the prefix is blocked.
+- blocked: the prefix itself is in BLOCKED_ROUTE_PREFIXES; `open` lists the
+  BLOCKED_ROUTE_EXCEPTIONS under it (sub-paths relative to the prefix).
+- partial: only the listed sub-paths are blocked (narrower BLOCKED_ROUTE_PREFIXES
+  entries); `open` lists sub-paths that must stay reachable.
+*/
 type RouteClass =
   | { status: 'allowed' }
   | { status: 'blocked'; open?: string[] }
@@ -200,10 +200,10 @@ const CONTROLLER_ROUTES: Record<string, RouteClass> = {
 };
 
 /**
- * Blocked prefixes with no controller in server/src/controllers. FUTO Backups (upstream v3.4)
- * ships its controllers in the npm package `@futo-org/backups-orchestrator-api`, which this
- * fork does not install or mount; the prefix stays blocked in case a merge brings it back.
- */
+Blocked prefixes with no controller in server/src/controllers. FUTO Backups (upstream v3.4)
+ships its controllers in the npm package `@futo-org/backups-orchestrator-api`, which this
+fork does not install or mount; the prefix stays blocked in case a merge brings it back.
+*/
 const BLOCKED_WITHOUT_CONTROLLER = ['/api/futo-backups'];
 
 const controllersDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'controllers');
@@ -292,7 +292,7 @@ describe('PixelUnion controller route snapshot (tenant reachability of every API
   it('accounts for every BLOCKED_ROUTE_PREFIXES entry and exception in the snapshot', () => {
     const blockedPaths = entries.flatMap(([prefix, route]) => {
       if (route.status === 'blocked') {
-        return [api(prefix)];
+        return api(prefix);
       }
       return route.status === 'partial' ? route.blocked.map((subPath) => api(prefix, subPath)) : [];
     });
