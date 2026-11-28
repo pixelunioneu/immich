@@ -13,11 +13,11 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
- * The fork's login is OIDC-only (Keycloak). These run the whole flow against the
- * e2e-auth-server mock: authorize, the provider's login and consent pages, the code
- * exchange at /api/oauth/callback, and the OIDC token bridge that keeps the
- * provider's refresh token per session.
- */
+The fork's login is OIDC-only (Keycloak). These run the whole flow against the
+e2e-auth-server mock: authorize, the provider's login and consent pages, the code
+exchange at /api/oauth/callback, and the OIDC token bridge that keeps the
+provider's refresh token per session.
+*/
 describe('PixelUnion OIDC login', () => {
   afterAll(async () => {
     await closeDb();

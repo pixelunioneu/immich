@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import SentryConsentConfirmModal from '$lib/modals/SentryConsentConfirmModal.svelte';
-  import { handleError } from '$lib/utils/handle-error';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import SentryConsentConfirmModal from '#lib/modals/SentryConsentConfirmModal.svelte';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { updateMyPreferences } from '@immich/sdk';
-  import { Field, modalManager, Switch, toastManager } from '@immich/ui';
+  import { Field, Switch, modalManager, toastManager } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
 

@@ -1,28 +1,22 @@
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { requestServerInfo } from '$lib/utils/auth';
-  import { getByteUnitString } from '$lib/utils/byte-units';
-  import { getStorageUsage, STORAGE_METER_THRESHOLDS } from '$lib/utils/storage-warning';
+  import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
+  import { STORAGE_METER_THRESHOLDS, getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { LoadingSpinner, Meter } from '@immich/ui';
-  import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
 
-  let usage = $derived(getStorageUsage());
+  const query = createQuery(getStorageQuery);
+  const serverInfo = $derived(query.data);
+
+  let usage = $derived(getStorageUsage(serverInfo));
   let availableBytes = $derived(usage?.totalBytes ?? 0);
   let usedBytes = $derived(usage?.usedBytes ?? 0);
-
-  onMount(async () => {
-    if (userInteraction.serverInfo && authManager.authenticated) {
-      return;
-    }
-    await requestServerInfo();
-  });
 </script>
 
 <div
-  class="ms-4 min-w-52 rounded-lg bg-light-100 p-4 text-sm"
+  class="min-w-52 bg-light-100 p-4 text-sm"
   title={$t('storage_usage', {
     values: {
       used: getByteUnitString(usedBytes, $locale, 3),
@@ -30,7 +24,7 @@
     },
   })}
 >
-  {#if userInteraction.serverInfo}
+  {#if serverInfo}
     <Meter
       size="tiny"
       class="bg-light-200"

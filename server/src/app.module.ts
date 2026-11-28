@@ -62,6 +62,10 @@ const apiMiddleware = [
 const configRepository = new ConfigRepository();
 const { bull, cls, database, otel } = configRepository.getEnv();
 
+// PixelUnion: upstream v3.4 mounts the FUTO Backups module (restic, own routes and socket)
+// in ApiModule and MaintenanceModule here. It must not be available on this server, so it is
+// not mounted at all. See changes.md before re-adding anything from upstream in this file.
+
 const commonImports = [
   ClsModule.forRoot(cls.config),
   KyselyModule.forRoot(getKyselyConfig(database.config)),
@@ -113,6 +117,7 @@ export class BaseModule implements OnModuleInit, OnModuleDestroy {
   imports: [...bullImports, ...commonImports, ScheduleModule.forRoot()],
   controllers: [...controllers],
   providers: [...common, ...apiMiddleware, { provide: IWorker, useValue: ImmichWorker.Api }],
+  exports: [AuthService, WebsocketRepository],
 })
 export class ApiModule extends BaseModule {}
 
@@ -138,6 +143,7 @@ export class ApiModule extends BaseModule {}
     { provide: APP_GUARD, useClass: MaintenanceAuthGuard },
     { provide: IWorker, useValue: ImmichWorker.Maintenance },
   ],
+  exports: [MaintenanceWorkerService, MaintenanceWebsocketRepository],
 })
 export class MaintenanceModule {
   constructor(

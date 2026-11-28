@@ -1,5 +1,4 @@
 import 'src/instrument.js';
-
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { isMainThread } from 'node:worker_threads';
@@ -15,6 +14,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(MaintenanceModule, {
     bufferLogs: true,
+    // see comment in api.ts
+    moduleIdGeneratorAlgorithm: 'deep-hash',
     routeConflictPolicy: { duplicate: 'error' },
     routeResolutionStrategy: 'specificity',
   });

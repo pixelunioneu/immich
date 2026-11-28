@@ -1,8 +1,8 @@
 /**
- * PixelUnion: the webhook workflow action is disabled. The core plugin no longer ships it
- * (so the method is pruned on plugin sync, cascading any existing workflow steps), and the
- * httpRequest host function refuses every call in case any other plugin tries to use it.
- */
+PixelUnion: the webhook workflow action is disabled. The core plugin no longer ships it
+(so the method is pruned on plugin sync, cascading any existing workflow steps), and the
+httpRequest host function refuses every call in case any other plugin tries to use it.
+*/
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

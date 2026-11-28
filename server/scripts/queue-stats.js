@@ -32,7 +32,6 @@
  *   REDIS_URL, REDIS_SOCKET, REDIS_HOSTNAME, REDIS_PORT, REDIS_USERNAME,
  *   REDIS_PASSWORD, REDIS_DBINDEX, BULL_PREFIX
  */
-
 import { Queue } from 'bullmq';
 import process from 'node:process';
 

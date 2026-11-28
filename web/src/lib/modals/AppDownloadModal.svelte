@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { appStoreBadge, BasicModal, Constants, playStoreBadge } from '@immich/ui';
+  import { BasicModal, Constants, appStoreBadge, playStoreBadge } from '@immich/ui';
   import { t } from 'svelte-i18n';
+
   type Props = {
     onClose: () => void;
   };

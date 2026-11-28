@@ -8,8 +8,6 @@ import {
 } from '@immich/plugin-sdk';
 import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { join } from 'node:path';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { JobOf } from 'src/types.js';
 import { DummyValue, OnEvent, OnJob } from 'src/decorators.js';
 import { AlbumsAddAssetsDto, CreateAlbumDto, GetAlbumsDto } from 'src/dtos/album.dto.js';
 import { BulkIdsDto } from 'src/dtos/asset-ids.response.dto.js';
@@ -27,10 +25,12 @@ import {
   WorkflowResult,
   WorkflowType,
 } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { AlbumService } from 'src/services/album.service.js';
 import { AssetService } from 'src/services/asset.service.js';
 import { BaseService } from 'src/services/base.service.js';
 import { TagService } from 'src/services/tag.service.js';
+import type { JobOf } from 'src/types.js';
 
 export const PU_HTTP_REQUEST_DISABLED = 'Outbound HTTP requests from workflows are disabled on this server';
 
@@ -307,6 +307,11 @@ export class WorkflowExecutionService extends BaseService {
     return this.onAssetTrigger({ userId, assetId, trigger: WorkflowTrigger.AssetMetadataExtraction });
   }
 
+  @OnEvent({ name: 'AssetOcrExtracted' })
+  onAssetOcrExtracted({ userId, assetId }: ArgOf<'AssetOcrExtracted'>) {
+    return this.onAssetTrigger({ userId, assetId, trigger: WorkflowTrigger.AssetOcrExtraction });
+  }
+
   @OnEvent({ name: 'AssetTag' })
   onAssetTagged({ assetId, userId }: ArgOf<'AssetTag'>) {
     return this.onAssetTrigger({ userId, assetId, trigger: WorkflowTrigger.AssetTagged });
@@ -323,7 +328,7 @@ export class WorkflowExecutionService extends BaseService {
   }
 
   @OnJob({ name: JobName.WorkflowAssetTrigger, queue: QueueName.Workflow })
-  handleAssetTrigger({ workflowId, assetId }: JobOf<JobName.WorkflowAssetTrigger>) {
+  handleAssetTrigger({ workflowId, assetId, trigger }: JobOf<JobName.WorkflowAssetTrigger>) {
     return this.execute(workflowId, (type) => {
       const assetService = BaseService.create(AssetService, this);
 
@@ -331,7 +336,7 @@ export class WorkflowExecutionService extends BaseService {
         case WorkflowType.AssetV1: {
           return {
             read: async () => {
-              const asset = await this.workflowRepository.getForAssetV1(assetId);
+              const asset = await this.workflowRepository.getForAssetV1(assetId, trigger);
               return {
                 data: { asset } as any,
                 authUserId: asset.ownerId,

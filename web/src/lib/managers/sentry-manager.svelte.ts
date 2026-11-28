@@ -1,8 +1,8 @@
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
 import type { UserAdminResponseDto } from '@immich/sdk';
 import * as Sentry from '@sentry/sveltekit';
-import { PUBLIC_SENTRY_DSN } from '$env/static/public';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
+import { PUBLIC_SENTRY_DSN } from '$app/env/public';
 
 /**
  * PixelUnion addition: opt-in Sentry error tracking, per user, errors only —

@@ -1,16 +1,19 @@
 <script lang="ts">
+  import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { getCurrentStorageLevel } from '#lib/utils/storage-warning.ts';
+  import { StorageWarningLevel } from '@immich/sdk';
+  import { createQuery } from '@tanstack/svelte-query';
   import ReferralInfo from './ReferralInfo.svelte';
   import ServerStatus from './ServerStatus.svelte';
   import StorageSpace from './StorageSpace.svelte';
   import StorageWarningInfo from './StorageWarningInfo.svelte';
-  import { getCurrentStorageLevel } from '$lib/utils/storage-warning';
-  import { StorageWarningLevel } from '@immich/sdk';
 
+  const storageQuery = createQuery(getStorageQuery);
   // At 80% or more the storage button takes this spot; its popup offers the referral too.
-  let storageWarningShown = $derived(getCurrentStorageLevel() !== StorageWarningLevel.None);
+  let storageWarningShown = $derived(getCurrentStorageLevel(storageQuery.data) !== StorageWarningLevel.None);
 </script>
 
-<div class="mt-auto">
+<div class="ms-4 mt-auto overflow-hidden rounded-lg">
   <StorageSpace />
   <StorageWarningInfo />
   {#if !storageWarningShown}

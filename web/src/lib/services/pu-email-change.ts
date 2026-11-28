@@ -1,4 +1,4 @@
-import { getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+import { getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
 export const PU_MGMT_API_BASE = 'https://api.prd.tech.pixelunion.eu';
 

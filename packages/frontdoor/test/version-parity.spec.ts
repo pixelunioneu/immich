@@ -27,7 +27,7 @@ describe('/api/server/version parity (idle tenants must answer exactly like a ru
 
     expect(
       frontdoorFields,
-      'ServerVersionResponseDto changed upstream: update parseVersion in packages/frontdoor/src/config.ts ' +
+      'ServerVersionResponseDto changed upstream: update buildServerInfo in packages/frontdoor/src/handlers/server-info.ts ' +
         'so the front door answers /api/server/version with the same fields as the server.',
     ).toEqual(serverFields);
   });

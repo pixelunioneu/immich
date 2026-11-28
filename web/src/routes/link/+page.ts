@@ -1,6 +1,6 @@
+import { OpenQueryParam } from '#lib/constants.ts';
+import { Route } from '#lib/route.ts';
 import { redirect } from '@sveltejs/kit';
-import { OpenQueryParam } from '$lib/constants';
-import { Route } from '$lib/route';
 import type { PageLoad } from './$types';
 
 enum LinkTarget {
@@ -8,12 +8,15 @@ enum LinkTarget {
   UNSUBSCRIBE = 'unsubscribe',
   VIEW_ASSET = 'view_asset',
   ACTIVATE_LICENSE = 'activate_license',
+  BACKUPS = 'backups',
 }
 
 export const load = (({ url }) => {
   const queryParams = url.searchParams;
   const target = queryParams.get('target') as LinkTarget;
   switch (target) {
+    // PixelUnion: FUTO Backups is not available, so a backups link goes to the timeline.
+    case LinkTarget.BACKUPS:
     case LinkTarget.HOME: {
       return redirect(307, Route.photos());
     }

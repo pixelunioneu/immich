@@ -75,6 +75,7 @@
       ".wmv"
     ]
   },
+  "serverFeatureLevel": 2,
   "syncRequestTypes": [
     "AlbumsV1",
     "AlbumsV2",

@@ -1,5 +1,4 @@
 import 'src/instrument.js';
-
 import { NestFactory } from '@nestjs/core';
 import { isMainThread } from 'node:worker_threads';
 import { MicroservicesModule } from 'src/app.module.js';

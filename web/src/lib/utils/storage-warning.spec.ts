@@ -1,9 +1,8 @@
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { decideStorageWarning, getStorageLevel, getStorageUsage } from '#lib/utils/storage-warning.ts';
+import { factory } from '#test/common/factories.ts';
+import { payload } from '#test/common/payloads.ts';
 import { StorageWarningLevel } from '@immich/sdk';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { decideStorageWarning, getStorageLevel, getStorageUsage } from '$lib/utils/storage-warning';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 const { None, AlmostFull, Full } = StorageWarningLevel;
 
@@ -57,37 +56,33 @@ describe('decideStorageWarning', () => {
 });
 
 describe('getStorageUsage', () => {
-  const serverInfo = { diskSizeRaw: 1000, diskUseRaw: 400 } as typeof userInteraction.serverInfo;
+  const serverInfo = payload.storage({ diskSizeRaw: 1000, diskUseRaw: 400 });
 
   afterEach(() => {
     authManager.reset();
-    userInteraction.serverInfo = undefined;
   });
 
   const login = (quota: { quotaSizeInBytes: number | null; quotaUsageInBytes: number | null }) => {
-    authManager.setUser(userAdminFactory.build(quota));
-    authManager.setPreferences(preferencesFactory.build());
+    authManager.setUser(factory.user(quota));
+    authManager.setPreferences(factory.preferences());
   };
 
   it('is unknown when not logged in', () => {
-    userInteraction.serverInfo = serverInfo;
-    expect(getStorageUsage()).toBeUndefined();
+    expect(getStorageUsage(serverInfo)).toBeUndefined();
   });
 
   it('uses the user quota when there is one', () => {
     login({ quotaSizeInBytes: 100, quotaUsageInBytes: 85 });
-    userInteraction.serverInfo = serverInfo;
-    expect(getStorageUsage()).toEqual({ usedBytes: 85, totalBytes: 100 });
+    expect(getStorageUsage(serverInfo)).toEqual({ usedBytes: 85, totalBytes: 100 });
   });
 
   it('falls back to the server disk without a quota', () => {
     login({ quotaSizeInBytes: null, quotaUsageInBytes: null });
-    userInteraction.serverInfo = serverInfo;
-    expect(getStorageUsage()).toEqual({ usedBytes: 400, totalBytes: 1000 });
+    expect(getStorageUsage(serverInfo)).toEqual({ usedBytes: 400, totalBytes: 1000 });
   });
 
   it('is unknown without a quota until the server disk is loaded', () => {
     login({ quotaSizeInBytes: null, quotaUsageInBytes: null });
-    expect(getStorageUsage()).toBeUndefined();
+    expect(getStorageUsage(undefined)).toBeUndefined();
   });
 });

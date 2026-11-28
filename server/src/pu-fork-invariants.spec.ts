@@ -1,18 +1,22 @@
 /**
- * PixelUnion fork invariants.
- *
- * Upstream merges tend to silently undo small fork edits: a guard clause dropped while
- * re-applying upstream's bootstrap change, a queue missing from an ops script, a
- * permission re-enabled in the Android manifest. None of those break compilation, so
- * this spec asserts them directly against the source tree. When one of these fails
- * after a merge, re-apply the fork change rather than updating the expectation —
- * unless the fork change itself is being retired on purpose.
- */
+PixelUnion fork invariants.
+
+Upstream merges tend to silently undo small fork edits: a guard clause dropped while
+re-applying upstream's bootstrap change, a queue missing from an ops script, a
+permission re-enabled in the Android manifest. None of those break compilation, so
+this spec asserts them directly against the source tree. When one of these fails
+after a merge, re-apply the fork change rather than updating the expectation —
+unless the fork change itself is being retired on purpose.
+*/
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { QueueName } from 'src/enum.js';
+
+// These tests walk the source tree and spawn `node --check` / `bash -n`. That takes about
+// a second alone, but the default 5s is too tight when the whole suite runs in parallel.
+vi.setConfig({ testTimeout: 30_000 });
 
 const serverRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(serverRoot, '..');
@@ -189,6 +193,13 @@ describe('PixelUnion fork invariants', () => {
     });
   });
 
+  // Sentry loads first and sets up OpenTelemetry. With two copies of the API package, Immich
+  // cannot register its meter provider after it, and the Prometheus metrics come out empty.
+  it('pnpm-lock.yaml has one @opentelemetry/api version (Sentry and Immich share its global registry)', () => {
+    const versions = new Set(read('pnpm-lock.yaml').match(/^ {2}'@opentelemetry\/api@[^':(]+/gm));
+    expect([...versions]).toHaveLength(1);
+  });
+
   describe('web branding', () => {
     it('does not import the Immich Logo component', () => {
       const offenders = walk(join(repoRoot, 'web', 'src'), ['.svelte', '.ts'])
@@ -198,6 +209,11 @@ describe('PixelUnion fork invariants', () => {
       expect(offenders).toEqual([]);
     });
 
+    // Upstream v3.4 added web/static/icon.svg (the Immich logo) and links it from app.html.
+    it('serves the PixelUnion icon as web/static/icon.svg (browser tab icon)', () => {
+      expect(read('web/static/icon.svg')).toBe(read('web/static/pixelunion.svg'));
+    });
+
     it('keeps the PixelUnion logo component', () => {
       expect(existsSync(join(repoRoot, 'web/src/lib/components/shared-components/pixelunion-logo.svelte'))).toBe(true);
     });
@@ -205,10 +221,10 @@ describe('PixelUnion fork invariants', () => {
 
   describe('i18n: PixelUnion keys', () => {
     /**
-     * Keys the fork added to i18n/en.json (`git diff v3.3.5 v3.3.5-pu7 -- i18n/en.json`).
-     * Pinned here rather than computed from git, so the test keeps working in shallow
-     * clones. When the fork adds a key, add it here and to every full fork locale.
-     */
+    Keys the fork added to i18n/en.json (`git diff v3.3.5 v3.3.5-pu7 -- i18n/en.json`).
+    Pinned here rather than computed from git, so the test keeps working in shallow
+    clones. When the fork adds a key, add it here and to every full fork locale.
+    */
     const PIXELUNION_KEYS = [
       'admin.manage_subscription',
       'admin.plans',
@@ -326,9 +342,9 @@ describe('PixelUnion fork invariants', () => {
     const FULL_LOCALES = ['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv'];
 
     /**
-     * Known gaps in the full locales on v3.3.5-pu7. Each gap falls back to English at
-     * runtime. This list may only shrink: translate the key, then remove it here.
-     */
+    Known gaps in the full locales on v3.3.5-pu7. Each gap falls back to English at
+    runtime. This list may only shrink: translate the key, then remove it here.
+    */
     const KNOWN_GAPS: Record<string, string[]> = {
       de: [
         'admin.manage_subscription',
@@ -377,9 +393,9 @@ describe('PixelUnion fork invariants', () => {
     };
 
     /**
-     * Locales the fork translated only in part: each must keep exactly the PixelUnion keys
-     * it carries today. (`ko.json` is not here: the fork only edited an upstream string.)
-     */
+    Locales the fork translated only in part: each must keep exactly the PixelUnion keys
+    it carries today. (`ko.json` is not here: the fork only edited an upstream string.)
+    */
     const PARTIAL_LOCALES: Record<string, string[]> = {
       da: [
         'error_tracking_setting_description',

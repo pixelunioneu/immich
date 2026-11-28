@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GooglePhotosMigrationPage from '$lib/components/google-photos-migration/google-photos-migration-page.svelte';
+  import GooglePhotosMigrationPage from '#lib/components/google-photos-migration/google-photos-migration-page.svelte';
   import type { PageData } from './$types';
 
   interface Props {

@@ -1,6 +1,6 @@
-import { PuReauthRequiredError } from '$lib/services/pu-email-change';
-import { getPuApiBaseUrl } from '$lib/utils/pu-api';
-import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
+import { getPuApiBaseUrl, puLocation } from '#lib/utils/pu-api.ts';
+import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
 export class MigratorApiError extends Error {
   constructor(
@@ -67,7 +67,7 @@ function getPuMigratorBaseUrl(): string {
 
 /** Tenant subdomain derived from the current Immich host. */
 export function getTenantUsername(): string {
-  const hostname = globalThis.location.hostname;
+  const hostname = puLocation.hostname();
   const nonprdSuffix = '.nonprd.tech.pixelunion.eu';
   const prdSuffix = '.pixelunion.eu';
 

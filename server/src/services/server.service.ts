@@ -37,7 +37,7 @@ export class ServerService extends BaseService {
         isOnboarded: true,
       });
     }
-    this.logger.log(`Feature Flags: ${JSON.stringify(await this.getFeatures(), null, 2)}`);
+    this.logger.log(`Feature Flags: ${JSON.stringify(await this.getFeatures())}`);
   }
 
   async getAboutInfo(): Promise<ServerAboutResponseDto> {
@@ -113,6 +113,8 @@ export class ServerService extends BaseService {
       facialRecognition: isFacialRecognitionEnabled(machineLearning),
       duplicateDetection: isDuplicateDetectionEnabled(machineLearning),
       map: map.enabled,
+      // PixelUnion: FUTO Backups is not part of this server
+      backups: false,
       reverseGeocoding: reverseGeocoding.enabled,
       importFaces: metadata.faces.import,
       sidecar: true,

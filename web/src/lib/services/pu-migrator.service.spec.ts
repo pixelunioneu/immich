@@ -1,17 +1,18 @@
-import { PuReauthRequiredError } from '$lib/services/pu-email-change';
+import { PuReauthRequiredError } from '#lib/services/pu-email-change.ts';
 import {
+  MigratorApiError,
   createMigration,
   getMigration,
   getMigrationUploadAuthHeader,
   getMigrationUploadUrl,
   getTenantUsername,
-  MigratorApiError,
   startMigration,
   validateCredentials,
-} from '$lib/services/pu-migrator.service';
-import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '$lib/utils/pu-oidc';
+} from '#lib/services/pu-migrator.service.ts';
+import { puLocation } from '#lib/utils/pu-api.ts';
+import { clearPuOidcAccessTokenCache, getPuOidcAccessToken } from '#lib/utils/pu-oidc.ts';
 
-vi.mock('$lib/utils/pu-oidc', () => ({
+vi.mock('#lib/utils/pu-oidc.ts', () => ({
   getPuOidcAccessToken: vi.fn(),
   clearPuOidcAccessTokenCache: vi.fn(),
 }));
@@ -22,7 +23,9 @@ const NONPRD_BASE = 'https://api.nonprd.tech.pixelunion.eu/api/migrator/google-p
 const jsonResponse = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Content-Type': 'application/json' } });
 
-const setHostname = (hostname: string) => vi.stubGlobal('location', { hostname });
+// The specs run in a real browser, which does not allow `location` to be stubbed. The code reads
+// the host through `puLocation`, so a test can pretend to run on a tenant host.
+const setHostname = (hostname: string) => vi.spyOn(puLocation, 'hostname').mockReturnValue(hostname);
 
 const authHeaderOf = (call: Parameters<typeof fetch>) => new Headers(call[1]?.headers).get('Authorization');
 
@@ -39,6 +42,7 @@ describe('pu-migrator.service', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   describe('getTenantUsername', () => {

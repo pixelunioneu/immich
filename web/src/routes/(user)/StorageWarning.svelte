@@ -1,15 +1,17 @@
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { requestServerInfo } from '$lib/utils/auth';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
   import {
     decideStorageWarning,
     getStorageLevel,
     getStorageUsage,
     type StorageUsage,
-  } from '$lib/utils/storage-warning';
-  import { openStorageWarningModal } from '$lib/utils/storage-warning-modal';
+  } from '#lib/utils/storage-warning.ts';
   import { StorageWarningLevel, updateMyPreferences } from '@immich/sdk';
+  import { createQuery } from '@tanstack/svelte-query';
+
+  const storageQuery = createQuery(getStorageQuery);
 
   // Not reactive on purpose: check once per app load, not on every preference or storage update.
   let checked = false;
@@ -18,11 +20,8 @@
     if (checked || !authManager.authenticated) {
       return;
     }
-    const usage = getStorageUsage();
+    const usage = getStorageUsage(storageQuery.data);
     if (!usage) {
-      if (!userInteraction.serverInfo) {
-        void requestServerInfo();
-      }
       return;
     }
     checked = true;

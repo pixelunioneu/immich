@@ -1,7 +1,8 @@
 <script lang="ts">
-  import PixelunionLogo from '$lib/components/shared-components/pixelunion-logo.svelte';
+  import PixelunionLogo from '#lib/components/shared-components/pixelunion-logo.svelte';
   import { Card, CardBody, CardHeader, Heading, VStack } from '@immich/ui';
   import type { Snippet } from 'svelte';
+
   interface Props {
     title?: string;
     children?: Snippet;

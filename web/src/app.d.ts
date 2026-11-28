@@ -1,5 +1,5 @@
+import type en from '#i18n/en.json';
 import 'svelte-i18n';
-import type en from '$i18n/en.json';
 
 /// <reference types="@sveltejs/kit" />
 
@@ -9,8 +9,6 @@ declare namespace App {
   interface PageData {
     meta: {
       title: string;
-      description?: string;
-      imageUrl?: string;
     };
   }
 
@@ -24,8 +22,6 @@ declare namespace App {
 declare module '$env/static/public' {
   export const PUBLIC_IMMICH_PAY_HOST: string;
   export const PUBLIC_IMMICH_BUY_HOST: string;
-  export const PUBLIC_API_URL: string;
-  export const PUBLIC_SENTRY_DSN: string;
 }
 
 interface Element {
@@ -38,7 +34,7 @@ type NestedKeys<T, K = keyof T> = K extends keyof T & string
   : never;
 
 declare module 'svelte-i18n' {
-  import type { InterpolationValues } from '$lib/elements/format-message';
+  import type { InterpolationValues } from '#lib/elements/format-message.ts';
   import type { Readable } from 'svelte/store';
 
   type Translations = NestedKeys<typeof en>;

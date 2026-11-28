@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { MaintenanceModeState } from 'src/types.js';
 import { OnEvent } from 'src/decorators.js';
 import {
   MaintenanceAuthDto,
@@ -9,7 +7,9 @@ import {
   SetMaintenanceModeDto,
 } from 'src/dtos/maintenance.dto.js';
 import { MaintenanceAction, SystemMetadataKey } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { MaintenanceModeState } from 'src/types.js';
 import {
   createMaintenanceLoginUrl,
   detectPriorInstall,
@@ -19,9 +19,7 @@ import {
 import { getExternalDomain } from 'src/utils/misc.js';
 import { assertNotDatabaseRestoreAction, refuseDatabaseRestore } from 'src/utils/pu-database-restore.js';
 
-/**
- * This service is available outside of maintenance mode to manage maintenance mode
- */
+/** This service is available outside of maintenance mode to manage maintenance mode */
 @Injectable()
 export class MaintenanceService extends BaseService {
   getMaintenanceMode(): Promise<MaintenanceModeState> {

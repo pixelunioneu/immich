@@ -1,19 +1,19 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Hosts the page is meant to call. The requests are still answered locally and never
- * leave the machine; anything not on this list (an API, an error tracker) fails the test.
- */
+Hosts the page is meant to call. The requests are still answered locally and never
+leave the machine; anything not on this list (an API, an error tracker) fails the test.
+*/
 const EXPECTED_EXTERNAL_HOSTS = new Set([
   // Status widget embedded in web/src/app.html.
   'status.pixelunion.eu',
 ]);
 
 /**
- * The login page served by the fork's nginx web image (Dockerfile.pu), with the API
- * behind it. Login is OIDC-only on the fork: the page must offer the OIDC button and
- * no password form, and carry PixelUnion branding rather than the Immich logo.
- */
+The login page served by the fork's nginx web image (Dockerfile.pu), with the API
+behind it. Login is OIDC-only on the fork: the page must offer the OIDC button and
+no password form, and carry PixelUnion branding rather than the Immich logo.
+*/
 test.describe('PixelUnion login page', () => {
   /** Requests to other hosts, answered locally. */
   let external: string[];

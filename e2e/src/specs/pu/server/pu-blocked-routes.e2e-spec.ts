@@ -22,13 +22,21 @@ const mixedCase = (path: string) =>
 const methods = ['get', 'post', 'put', 'delete'] as const;
 
 /**
- * The guard answers with Nest's plain NotFoundException (`Not Found`). It only runs for
- * a request that matches a handler: a path or method without one gets Express's own
- * 404 (`Cannot GET /api/...`), which is just as safe. So every variant must be a 404 for
- * every method, and each variant of the blocked path itself must reach a real handler
- * and be refused by the guard for at least one method.
- */
+The guard answers with Nest's plain NotFoundException (`Not Found`). It only runs for
+a request that matches a handler: a path or method without one gets Express's own
+404 (`Cannot GET /api/...`), which is just as safe. So every variant must be a 404 for
+every method, and each variant of the blocked path itself must reach a real handler
+and be refused by the guard for at least one method.
+*/
 const GUARD_MESSAGE = 'Not Found';
+
+/**
+Blocked prefixes that must have no handler at all on this server. FUTO Backups (upstream
+v3.4) is not mounted in the fork, so nothing under its prefix may reach a handler: every
+answer is Express's own 404, never the guard's. If one of these starts answering with the
+guard's message, a merge has mounted the module again.
+*/
+const NOT_MOUNTED_PREFIXES = new Set(['/api/futo-backups']);
 
 describe('PixelUnion blocked routes', () => {
   let admin: LoginResponse;
@@ -43,6 +51,9 @@ describe('PixelUnion blocked routes', () => {
     expect(BLOCKED_ROUTE_PREFIXES).toContain('/api/admin/config');
     expect(BLOCKED_ROUTE_EXCEPTIONS).toContain('/api/admin/maintenance/status');
     expect(BLOCKED_ROUTE_EXCEPTIONS).toHaveLength(2);
+    for (const prefix of NOT_MOUNTED_PREFIXES) {
+      expect(BLOCKED_ROUTE_PREFIXES).toContain(prefix);
+    }
   });
 
   it('lets an admin reach admin routes that are not blocked', async () => {
@@ -73,9 +84,26 @@ describe('PixelUnion blocked routes', () => {
       }
 
       expect(responses.map(({ status }) => status)).toEqual(methods.map(() => 404));
-      if (variant !== 'sub-path') {
+      if (NOT_MOUNTED_PREFIXES.has(prefix)) {
+        expect(responses.map(({ body }) => body.message)).not.toContain(GUARD_MESSAGE);
+      } else if (variant !== 'sub-path') {
         expect(responses.map(({ body }) => body.message)).toContain(GUARD_MESSAGE);
       }
+    });
+  });
+
+  describe('FUTO Backups is not available', () => {
+    it('has no socket endpoint', async () => {
+      const { status } = await request(app)
+        .get('/futo-backups/socket.io/?EIO=4&transport=polling')
+        .set(asBearerAuth(admin.accessToken));
+      expect(status).toBe(404);
+    });
+
+    it('reports the backups feature as off', async () => {
+      const { status, body } = await request(app).get('/server/features');
+      expect(status).toBe(200);
+      expect(body.backups).toBe(false);
     });
   });
 

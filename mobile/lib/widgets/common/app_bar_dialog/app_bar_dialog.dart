@@ -150,17 +150,13 @@ class ImmichAppBarDialog extends HookConsumerWidget {
       );
     }
 
-    buildBillingButton() {
-      return buildActionButton(
-        Icons.credit_card,
-        "Billing",
-        () async {
-          final url = Uri.parse('https://billing.stripe.com/p/login/14kaFHfe8aTHa2s5kk');
-          if (await canLaunchUrl(url)) {
-            await launchUrl(url, mode: LaunchMode.externalApplication);
-          }
-        },
-      );
+    Widget buildBillingButton() {
+      return buildActionButton(Icons.credit_card, "Billing", () async {
+        final url = Uri.parse('https://billing.stripe.com/p/login/14kaFHfe8aTHa2s5kk');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      });
     }
 
     Widget buildStorageInformation() {

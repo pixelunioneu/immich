@@ -1,4 +1,4 @@
-import { createApiKey, deleteApiKey, getApiKeys, Permission } from '@immich/sdk';
+import { Permission, createApiKey, deleteApiKey, getApiKeys } from '@immich/sdk';
 
 export const MIGRATION_API_KEY_NAME = 'google-photos-migration';
 

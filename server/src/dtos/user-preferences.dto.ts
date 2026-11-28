@@ -1,12 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
-import type { UserPreferences } from 'src/types.js';
 import {
   AssetOrderSchema,
   PersonUpdateStrategySchema,
   StorageWarningLevelSchema,
   UserAvatarColorSchema,
 } from 'src/enum.js';
+import type { UserPreferences } from 'src/types.js';
 
 const AlbumsUpdateSchema = z
   .object({

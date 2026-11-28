@@ -4,7 +4,6 @@ import {
   ClientSecretBasic,
   ClientSecretPost,
   None,
-  type UserInfoResponse,
   allowInsecureRequests as allowInsecureRequestsExecute,
   authorizationCodeGrant,
   buildAuthorizationUrl,
@@ -16,27 +15,34 @@ import {
   refreshTokenGrant,
   skipSubjectCheck,
   tokenRevocation,
+  type UserInfoResponse,
 } from 'openid-client';
+import { SystemConfig } from 'src/dtos/config.dto.js';
 import { OAuthTokenEndpointAuthMethod } from 'src/enum.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 
-export type OAuthConfig = {
-  clientId: string;
-  clientSecret?: string;
-  issuerUrl: string;
-  accountManagementUrl: string;
-  endSessionEndpoint: string;
-  mobileOverrideEnabled: boolean;
-  mobileRedirectUri: string;
-  profileSigningAlgorithm: string;
-  prompt: string;
-  scope: string;
-  signingAlgorithm: string;
-  tokenEndpointAuthMethod: OAuthTokenEndpointAuthMethod;
-  timeout: number;
-  allowInsecureRequests: boolean;
-};
-export type OAuthProfile = UserInfoResponse;
+export type OAuthConfig = Pick<
+  SystemConfig['oauth'],
+  | 'defaultStorageQuota'
+  | 'storageLabelClaim'
+  | 'storageQuotaClaim'
+  | 'roleClaim'
+  | 'clientId'
+  | 'clientSecret'
+  | 'issuerUrl'
+  | 'accountManagementUrl'
+  | 'endSessionEndpoint'
+  | 'mobileOverrideEnabled'
+  | 'mobileRedirectUri'
+  | 'profileSigningAlgorithm'
+  | 'prompt'
+  | 'scope'
+  | 'signingAlgorithm'
+  | 'tokenEndpointAuthMethod'
+  | 'timeout'
+  | 'allowInsecureRequests'
+>;
+export type OAuthRawProfile = UserInfoResponse;
 
 @Injectable()
 export class OAuthRepository {
@@ -86,23 +92,23 @@ export class OAuthRepository {
     url: string,
     expectedState: string,
     codeVerifier: string,
-  ): Promise<{ profile: OAuthProfile; sid?: string; idToken?: string; refreshToken?: string }> {
+  ): Promise<{ rawProfile: OAuthRawProfile; sid?: string; idToken?: string; refreshToken?: string }> {
     const client = await this.getClient(config);
     const pkceCodeVerifier = client.serverMetadata().supportsPKCE() ? codeVerifier : undefined;
 
     try {
       const tokens = await authorizationCodeGrant(client, new URL(url), { expectedState, pkceCodeVerifier });
 
-      let profile: OAuthProfile;
+      let rawProfile: OAuthRawProfile;
       const tokenClaims = tokens.claims();
       if (tokenClaims && 'email' in tokenClaims) {
         this.logger.debug('Using ID token claims instead of userinfo endpoint');
-        profile = tokenClaims as OAuthProfile;
+        rawProfile = tokenClaims;
       } else {
-        profile = await fetchUserInfo(client, tokens.access_token, skipSubjectCheck);
+        rawProfile = await fetchUserInfo(client, tokens.access_token, skipSubjectCheck);
       }
 
-      if (!profile.sub) {
+      if (!rawProfile.sub) {
         throw new Error('Unexpected profile response, no `sub`');
       }
 
@@ -114,7 +120,7 @@ export class OAuthRepository {
         }
       }
 
-      return { profile, sid, idToken: tokens.id_token, refreshToken: tokens.refresh_token };
+      return { rawProfile, sid, idToken: tokens.id_token, refreshToken: tokens.refresh_token };
     } catch (error: Error | any) {
       if (error.message.includes('unexpected JWT alg received')) {
         this.logger.warn(
@@ -157,7 +163,7 @@ export class OAuthRepository {
     return response.arrayBuffer();
   }
 
-  private jwksClients: Map<string, JWTVerifyGetKey> = new Map(); // useful for caching and performnce
+  private jwksClients: Map<string, JWTVerifyGetKey> = new Map(); // useful for caching and performance
   async validateLogoutToken(config: OAuthConfig, logoutToken: string): Promise<{ sub?: string; sid?: string } | null> {
     const client = await this.getClient(config);
     const algorithm = client.clientMetadata().id_token_signed_response_alg ?? 'RS256';

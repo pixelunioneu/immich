@@ -1,99 +1,105 @@
-import { render, screen } from '@testing-library/svelte';
-import { init, register, waitLocale } from 'svelte-i18n';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import { locale as i18nLocale, register } from 'svelte-i18n';
+import { expect, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import ReferralInfo from './ReferralInfo.svelte';
+
+// The shared test setup renders translation keys; these specs assert the English strings.
+register('en', () => import('#i18n/en.json'));
+
+beforeAll(async () => {
+  await i18nLocale.set('en');
+});
 
 const referral = vi.hoisted(() => ({ loadReferral: vi.fn() }));
 
 // Keep the real eligibility rule (the 16 GiB cut-off is fork intent); only the network lookup is faked.
-vi.mock('$lib/services/pu-referral.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/services/pu-referral.service')>()),
+vi.mock('#lib/services/pu-referral.service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/services/pu-referral.service.ts')>()),
   loadReferral: referral.loadReferral,
 }));
 
 const GiB = 1024 ** 3;
 
-// Lets the referral lookup resolve and the component re-render before checking that something is absent.
-const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+const load = () => Promise.resolve({});
 
 const login = (quotaSizeInBytes: number | null) => {
-  authManager.setUser(userAdminFactory.build({ quotaSizeInBytes, quotaUsageInBytes: 0 }));
-  authManager.setPreferences(preferencesFactory.build());
+  authManager.setUser(factory.user({ quotaSizeInBytes, quotaUsageInBytes: 0 }));
+  authManager.setPreferences(factory.preferences());
 };
 
 const ok = { status: 'ok', referral: { referral_id: 'abc', referral_url: 'https://pixelunion.eu/?ref=abc' } };
 
+const banner = () => page.getByRole('link', { name: 'Get extra storage' });
+
 // PixelUnion: small-plan tenants with a referral link get a sidebar banner that leads to the referral page.
 describe('ReferralInfo (PixelUnion)', () => {
-  beforeAll(async () => {
-    await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
-    await waitLocale('en-US');
-  });
-
-  afterEach(() => {
-    authManager.reset();
-    userInteraction.serverInfo = undefined;
+  beforeEach(() => {
     referral.loadReferral.mockReset();
   });
 
-  it('links to the referral page when the tenant has a referral link', async () => {
+  test('links to the referral page when the tenant has a referral link', async ({ render }) => {
     login(5 * GiB);
     referral.loadReferral.mockResolvedValue(ok);
 
-    render(ReferralInfo);
+    await render(ReferralInfo, load);
 
-    const link = await screen.findByRole('link', { name: 'Get extra storage' });
-    expect(link).toHaveAttribute('href', '/referral');
+    await expect.element(banner()).toHaveAttribute('href', '/referral');
   });
 
-  it('is offered up to and including 16 GB of total storage', async () => {
+  test('is offered up to and including 16 GB of total storage', async ({ render }) => {
     login(16 * GiB);
     referral.loadReferral.mockResolvedValue(ok);
 
-    render(ReferralInfo);
+    await render(ReferralInfo, load);
 
-    expect(await screen.findByRole('link', { name: 'Get extra storage' })).toBeInTheDocument();
+    await expect.element(banner()).toBeInTheDocument();
   });
 
-  it.each([{ status: 'none' }, { status: 'unavailable' }])(
+  test.for([{ status: 'none' }, { status: 'unavailable' }])(
     'shows nothing when the referral lookup returns $status',
-    async (result) => {
+    async (result, { render, settle }) => {
       login(5 * GiB);
       referral.loadReferral.mockResolvedValue(result);
 
-      const { container } = render(ReferralInfo);
+      await render(ReferralInfo, load);
 
       await vi.waitFor(() => expect(referral.loadReferral).toHaveBeenCalled());
       await settle();
-      expect(screen.queryByText('Get extra storage')).not.toBeInTheDocument();
-      expect(container.querySelector('a')).toBeNull();
+      await expect.element(page.getByText('Get extra storage')).not.toBeInTheDocument();
+      expect(document.body.querySelector('a')).toBeNull();
     },
   );
 
-  it('is not offered (or looked up) above 16 GB of total storage', async () => {
+  test('is not offered (or looked up) above 16 GB of total storage', async ({ render, settle }) => {
     login(16 * GiB + 1);
     referral.loadReferral.mockResolvedValue(ok);
 
-    render(ReferralInfo);
+    await render(ReferralInfo, load);
 
     await settle();
     expect(referral.loadReferral).not.toHaveBeenCalled();
-    expect(screen.queryByText('Get extra storage')).not.toBeInTheDocument();
+    await expect.element(page.getByText('Get extra storage')).not.toBeInTheDocument();
   });
 
-  it('uses the server disk size for eligibility when the user has no quota', async () => {
+  test('uses the server disk size for eligibility when the user has no quota', async ({
+    data,
+    api,
+    render,
+    settle,
+  }) => {
     login(null);
-    userInteraction.serverInfo = { diskSizeRaw: 2000 * GiB, diskUseRaw: 0 } as typeof userInteraction.serverInfo;
+    Object.assign(data.storage, { diskSizeRaw: 2000 * GiB, diskUseRaw: 0 });
     referral.loadReferral.mockResolvedValue(ok);
 
-    render(ReferralInfo);
+    await render(ReferralInfo, load);
 
+    // Wait for the storage lookup, so the component has the disk size it decides on.
+    await vi.waitFor(() => expect(api.getStorage.calls).toHaveLength(1));
     await settle();
     expect(referral.loadReferral).not.toHaveBeenCalled();
-    expect(screen.queryByText('Get extra storage')).not.toBeInTheDocument();
+    await expect.element(page.getByText('Get extra storage')).not.toBeInTheDocument();
   });
 });

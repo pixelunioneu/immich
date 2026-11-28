@@ -1,10 +1,14 @@
-import { render, screen } from '@testing-library/svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import { expect, vi } from 'vitest';
+import { cleanup } from 'vitest-browser-svelte';
+import { page } from 'vitest/browser';
 import UserSettingsList from './UserSettingsList.svelte';
 
 const flags = vi.hoisted(() => ({ value: { oauth: false, passwordLogin: true } as Record<string, boolean> }));
-const env = vi.hoisted(() => ({ PUBLIC_SENTRY_DSN: '' }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     init: vi.fn(),
     loadFeatureFlags: vi.fn(),
@@ -14,65 +18,82 @@ vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$env/static/public', () => env);
+// Browser mode evaluates this mock once per file, so a DSN is configured here; the case without one is
+// covered in pu-UserSettingsList-without-sentry-dsn.spec.ts.
+vi.mock('$app/env/public', () => ({
+  PUBLIC_IMMICH_BUY_HOST: 'https://buy.immich.app',
+  PUBLIC_IMMICH_PAY_HOST: 'https://pay.futo.org',
+  PUBLIC_API_URL: 'https://api.prd.tech.pixelunion.eu',
+  PUBLIC_SENTRY_DSN: 'https://dsn.test/1',
+  PUBLIC_PU_FAKE_REFERRAL_ID: '',
+}));
+
+const load = () => Promise.resolve({});
+
+const login = () => {
+  authManager.setUser(factory.user());
+  authManager.setPreferences(factory.preferences());
+};
 
 // The i18n test setup has no messages loaded, so accordion titles render as their translation keys.
-const has = (key: string) => screen.queryByText(key) !== null;
+const accordion = (key: string) => page.getByText(key, { exact: true });
 
 // PixelUnion: identity lives in Keycloak, so OAuth tenants get portal-backed account settings instead of native ones.
 describe('UserSettingsList (PixelUnion)', () => {
-  it('shows native account settings when OAuth is off', () => {
+  test('shows native account settings when OAuth is off', async ({ render }) => {
     flags.value = { oauth: false, passwordLogin: true };
+    login();
 
-    render(UserSettingsList);
+    await render(UserSettingsList, load);
 
-    expect(has('account')).toBe(true);
-    expect(has('pu_account_security')).toBe(false);
-    expect(has('pu_email_address')).toBe(false);
+    await expect.element(accordion('account')).toBeInTheDocument();
+    await expect.element(accordion('pu_account_security')).not.toBeInTheDocument();
+    await expect.element(accordion('pu_email_address')).not.toBeInTheDocument();
   });
 
-  it('replaces native account settings with PixelUnion account security and email change when OAuth is on', () => {
+  test('replaces native account settings with PixelUnion account security and email change when OAuth is on', async ({
+    render,
+  }) => {
     flags.value = { oauth: true, passwordLogin: false };
+    login();
 
-    render(UserSettingsList);
+    await render(UserSettingsList, load);
 
-    expect(has('account')).toBe(false);
-    expect(has('pu_account_security')).toBe(true);
-    expect(has('pu_email_address')).toBe(true);
+    await expect.element(accordion('pu_account_security')).toBeInTheDocument();
+    await expect.element(accordion('pu_email_address')).toBeInTheDocument();
+    await expect.element(accordion('account')).not.toBeInTheDocument();
   });
 
-  it('only shows the password accordion when password login is enabled', () => {
+  test('only shows the password accordion when password login is enabled', async ({ render }) => {
     flags.value = { oauth: true, passwordLogin: false };
-    const { unmount } = render(UserSettingsList);
-    expect(has('password')).toBe(false);
-    unmount();
+    login();
+    await render(UserSettingsList, load);
+    await expect.element(accordion('pu_account_security')).toBeInTheDocument();
+    await expect.element(accordion('password')).not.toBeInTheDocument();
+    cleanup();
 
     flags.value = { oauth: true, passwordLogin: true };
-    render(UserSettingsList);
-    expect(has('password')).toBe(true);
+    await render(UserSettingsList, load);
+    await expect.element(accordion('password')).toBeInTheDocument();
   });
 
-  it('does not offer native OAuth linking or purchase settings', () => {
+  test('does not offer native OAuth linking or purchase settings', async ({ render }) => {
     flags.value = { oauth: true, passwordLogin: true };
+    login();
 
-    render(UserSettingsList);
+    await render(UserSettingsList, load);
 
-    expect(has('oauth')).toBe(false);
-    expect(has('purchase_settings')).toBe(false);
+    await expect.element(accordion('pu_account_security')).toBeInTheDocument();
+    await expect.element(accordion('oauth')).not.toBeInTheDocument();
+    await expect.element(accordion('purchase_settings')).not.toBeInTheDocument();
   });
 
-  it('only shows privacy (Sentry consent) settings when a Sentry DSN is configured', () => {
+  test('shows privacy (Sentry consent) settings when a Sentry DSN is configured', async ({ render }) => {
     flags.value = { oauth: true, passwordLogin: false };
-    const { unmount } = render(UserSettingsList);
-    expect(has('privacy')).toBe(false);
-    unmount();
+    login();
 
-    env.PUBLIC_SENTRY_DSN = 'https://dsn.test/1';
-    try {
-      render(UserSettingsList);
-      expect(has('privacy')).toBe(true);
-    } finally {
-      env.PUBLIC_SENTRY_DSN = '';
-    }
+    await render(UserSettingsList, load);
+
+    await expect.element(accordion('privacy')).toBeInTheDocument();
   });
 });

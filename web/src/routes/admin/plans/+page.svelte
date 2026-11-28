@@ -1,7 +1,7 @@
 <script lang="ts">
-  import AdminPageLayout from '$lib/components/layouts/AdminPageLayout.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { Button, Container, getByteUnitString, Icon, Meter, Text } from '@immich/ui';
+  import AdminPageLayout from '#lib/components/layouts/AdminPageLayout.svelte';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { Button, Container, Icon, Meter, Text, getByteUnitString } from '@immich/ui';
   import { mdiDatabase, mdiHarddisk, mdiRocketLaunch } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';

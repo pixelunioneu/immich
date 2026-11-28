@@ -57,4 +57,13 @@ describe(`${ServerService.name} (PixelUnion upload quota)`, () => {
       expect(mocks.storage.checkDiskUsage).toHaveBeenCalledWith(expect.stringContaining('/data/library'));
     });
   });
+
+  // PixelUnion: FUTO Backups is not part of this server; upstream's config switch must not turn it on.
+  describe('getFeatures', () => {
+    it('should report backups as disabled even when backup.beta is set', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({ backup: { beta: true } });
+
+      await expect(sut.getFeatures()).resolves.toMatchObject({ backups: false });
+    });
+  });
 });

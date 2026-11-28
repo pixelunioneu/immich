@@ -1,96 +1,94 @@
-import type { ServerAboutResponseDto } from '@immich/sdk';
-import { cleanup, screen } from '@testing-library/svelte';
-import { init, register, waitLocale } from 'svelte-i18n';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { PU_BILLING_PORTAL_URL } from '$lib/utils/pu-api';
-import { renderWithTooltips } from '$tests/helpers';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { PU_BILLING_PORTAL_URL } from '#lib/utils/pu-api.ts';
+import { factory } from '#test/common/factories.ts';
+import { test } from '#test/unit/fixtures.ts';
+import type { PageComponent } from '#test/unit/mocks/mock.ts';
+import { locale as i18nLocale, register } from 'svelte-i18n';
+import { expect, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import AccountInfoPanel from './AccountInfoPanel.svelte';
 
-vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/photos'), route: { id: null }, params: {} } }));
+// The shared test setup renders translation keys; these specs assert the English strings.
+register('en', () => import('#i18n/en.json'));
+
+beforeAll(async () => {
+  await i18nLocale.set('en');
+});
+
+const load = () => Promise.resolve({});
+
+// `render` only passes page data to the component; this is how the panel gets its `onClose` prop.
+const panelWith = (props: { onClose?: () => void }) =>
+  ((anchor: Comment) =>
+    (AccountInfoPanel as unknown as (anchor: Comment, props: object) => void)(
+      anchor,
+      props,
+    )) as unknown as PageComponent;
 
 const login = (isAdmin: boolean) => {
-  authManager.setUser(userAdminFactory.build({ isAdmin, name: 'Test User', email: 'test@example.com' }));
-  authManager.setPreferences(preferencesFactory.build());
+  authManager.setUser(factory.user({ isAdmin, name: 'Test User', email: 'test@example.com' }));
+  authManager.setPreferences(factory.preferences());
 };
 
-const link = (name: string) => screen.getByRole('link', { name });
+const link = (name: string) => page.getByRole('link', { name, exact: true });
 
 // PixelUnion: the account menu adds a billing link (Stripe portal) for tenant owners, sends admins to the
 // user list rather than the server settings, and offers the referral ("invite a friend") page.
 describe('AccountInfoPanel (PixelUnion)', () => {
-  beforeAll(async () => {
-    await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
-    await waitLocale('en-US');
-  });
-
-  beforeEach(() => {
-    userInteraction.aboutInfo = {} as ServerAboutResponseDto;
-    sdkMock.getAboutInfo.mockResolvedValue({} as ServerAboutResponseDto);
-  });
-
-  afterEach(() => {
-    // Unmount before logging out: the panel reads the user while it renders.
-    cleanup();
-    authManager.reset();
-    userInteraction.aboutInfo = undefined;
-  });
-
-  it('gives admins a Billing link to the Stripe customer portal', () => {
+  test('gives admins a Billing link to the Stripe customer portal', async ({ render }) => {
     login(true);
 
-    renderWithTooltips(AccountInfoPanel, {});
+    await render(panelWith({}), load);
 
-    expect(link('Billing')).toHaveAttribute('href', PU_BILLING_PORTAL_URL);
+    await expect.element(link('Billing')).toHaveAttribute('href', PU_BILLING_PORTAL_URL);
     expect(PU_BILLING_PORTAL_URL).toMatch(/^https:\/\/billing\.stripe\.com\//);
   });
 
-  it('does not show the Billing link to regular users', () => {
+  test('does not show the Billing link to regular users', async ({ render }) => {
     login(false);
 
-    renderWithTooltips(AccountInfoPanel, {});
+    await render(panelWith({}), load);
 
-    expect(screen.queryByRole('link', { name: 'Billing' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
+    await expect.element(link('Account Settings')).toBeInTheDocument();
+    await expect.element(link('Billing')).not.toBeInTheDocument();
+    await expect.element(link('Administration')).not.toBeInTheDocument();
   });
 
-  it('sends admins to the user list, not the server settings', () => {
+  test('sends admins to the user list, not the server settings', async ({ render }) => {
     login(true);
 
-    renderWithTooltips(AccountInfoPanel, {});
+    await render(panelWith({}), load);
 
-    expect(link('Administration')).toHaveAttribute('href', '/admin/users');
+    await expect.element(link('Administration')).toHaveAttribute('href', '/admin/users');
   });
 
-  it('offers every user an invite-a-friend link to the referral page', () => {
+  test('offers every user an invite-a-friend link to the referral page', async ({ render }) => {
     login(false);
 
-    renderWithTooltips(AccountInfoPanel, {});
+    await render(panelWith({}), load);
 
-    expect(link('Invite a friend')).toHaveAttribute('href', '/referral');
+    await expect.element(link('Invite a friend')).toHaveAttribute('href', '/referral');
   });
 
-  it('keeps account settings and sign out', () => {
+  test('keeps account settings and sign out', async ({ render }) => {
     login(false);
 
-    renderWithTooltips(AccountInfoPanel, {});
+    await render(panelWith({}), load);
 
-    expect(link('Account Settings')).toHaveAttribute('href', '/user-settings');
-    expect(link('Sign Out')).toHaveAttribute('href', '/auth/logout');
+    await expect.element(link('Account Settings')).toHaveAttribute('href', '/user-settings');
+    await expect.element(link('Sign Out')).toHaveAttribute('href', '/auth/logout');
   });
 
-  it('closes the menu when a fork link is followed', async () => {
+  test('closes the menu when a fork link is followed', async ({ render }) => {
     login(true);
     const onClose = vi.fn();
 
-    renderWithTooltips(AccountInfoPanel, { onClose });
+    await render(panelWith({ onClose }), load);
     for (const name of ['Billing', 'Invite a friend']) {
-      link(name).addEventListener('click', (event) => event.preventDefault());
-      link(name).click();
+      const element = link(name);
+      await expect.element(element).toBeInTheDocument();
+      element.element().addEventListener('click', (event) => event.preventDefault());
+      await element.click();
     }
 
     expect(onClose).toHaveBeenCalledTimes(2);

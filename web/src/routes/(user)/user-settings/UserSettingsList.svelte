@@ -1,14 +1,9 @@
 <script lang="ts">
-  import ChangePinCodeSettings from './PinCodeSettings.svelte';
-  import DownloadSettings from './DownloadSettings.svelte';
-  import FeatureSettings from './FeatureSettings.svelte';
-  import NotificationsSettings from './NotificationsSettings.svelte';
-  import PrivacySettings from './PrivacySettings.svelte';
-  import UserUsageStatistic from './UserUsageStatistic.svelte';
-  import { OpenQueryParam } from '$lib/constants';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { type ApiKeyResponseDto, type SessionResponseDto } from '@immich/sdk';
-  import { PUBLIC_SENTRY_DSN } from '$env/static/public';
+  import SettingAccordion from '#lib/components/shared-components/settings/SettingAccordion.svelte';
+  import PuEmailChangeSettings from '#lib/components/user-settings-page/pu-email-change-settings.svelte';
+  import PuUserProfileSettings from '#lib/components/user-settings-page/pu-user-profile-settings.svelte';
+  import { OpenQueryParam } from '#lib/constants.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
   import {
     mdiAccountGroupOutline,
     mdiAccountOutline,
@@ -26,22 +21,19 @@
     mdiShieldLockOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
+  import { PUBLIC_SENTRY_DSN } from '$app/env/public';
   import AppSettings from './AppSettings.svelte';
   import ChangePasswordSettings from './ChangePasswordSettings.svelte';
   import DeviceList from './DeviceList.svelte';
+  import DownloadSettings from './DownloadSettings.svelte';
+  import FeatureSettings from './FeatureSettings.svelte';
+  import NotificationsSettings from './NotificationsSettings.svelte';
+  import ChangePinCodeSettings from './PinCodeSettings.svelte';
+  import PrivacySettings from './PrivacySettings.svelte';
   import SharingSettings from './SharingSettings.svelte';
-  import PuEmailChangeSettings from '$lib/components/user-settings-page/pu-email-change-settings.svelte';
-  import PuUserProfileSettings from '$lib/components/user-settings-page/pu-user-profile-settings.svelte';
   import UserApiKeyList from './UserApiKeyList.svelte';
   import UserProfileSettings from './UserProfileSettings.svelte';
-
-  interface Props {
-    keys?: ApiKeyResponseDto[];
-    sessions?: SessionResponseDto[];
-  }
-
-  let { keys = $bindable([]), sessions = $bindable([]) }: Props = $props();
+  import UserUsageStatistic from './UserUsageStatistic.svelte';
 </script>
 
 <SettingAccordion
@@ -87,7 +79,7 @@
 </SettingAccordion>
 
 <SettingAccordion icon={mdiApi} key="api-keys" title={$t('api_keys')} subtitle={$t('manage_your_api_keys')}>
-  <UserApiKeyList bind:keys />
+  <UserApiKeyList />
 </SettingAccordion>
 
 <SettingAccordion
@@ -96,7 +88,7 @@
   title={$t('authorized_devices')}
   subtitle={$t('manage_your_devices')}
 >
-  <DeviceList bind:devices={sessions} />
+  <DeviceList />
 </SettingAccordion>
 
 <SettingAccordion

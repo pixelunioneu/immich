@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { getCurrentStorageLevel, getStorageUsage } from '$lib/utils/storage-warning';
-  import { openStorageWarningModal } from '$lib/utils/storage-warning-modal';
+  import { getStorageQuery } from '#lib/queries/server-info.query.ts';
+  import { openStorageWarningModal } from '#lib/utils/storage-warning-modal.ts';
+  import { getCurrentStorageLevel, getStorageUsage } from '#lib/utils/storage-warning.ts';
   import { StorageWarningLevel } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight, mdiDatabaseAlertOutline } from '@mdi/js';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
 
-  let usage = $derived(getStorageUsage());
-  let level = $derived(getCurrentStorageLevel());
+  const storageQuery = createQuery(getStorageQuery);
+  let usage = $derived(getStorageUsage(storageQuery.data));
+  let level = $derived(getCurrentStorageLevel(storageQuery.data));
   let isFull = $derived(level === StorageWarningLevel.Full);
 
   const onclick = () => {

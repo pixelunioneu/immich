@@ -1,19 +1,19 @@
 import {
-  createApiKey,
-  deleteApiKey,
-  getApiKeys,
-  Permission,
-  type ApiKeyCreateResponseDto,
-  type ApiKeyResponseDto,
-} from '@immich/sdk';
-import {
+  MIGRATION_API_KEY_NAME,
+  MIGRATION_API_KEY_PERMISSIONS,
   createMigrationApiKey,
   deleteMigrationApiKey,
   getStoredMigrationApiKeyId,
-  MIGRATION_API_KEY_NAME,
-  MIGRATION_API_KEY_PERMISSIONS,
   storeMigrationApiKeyId,
-} from '$lib/services/pu-migration-apikey';
+} from '#lib/services/pu-migration-apikey.ts';
+import {
+  Permission,
+  createApiKey,
+  deleteApiKey,
+  getApiKeys,
+  type ApiKeyCreateResponseDto,
+  type ApiKeyResponseDto,
+} from '@immich/sdk';
 
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
